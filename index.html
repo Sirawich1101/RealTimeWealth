@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>RealTimeNetWorth</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#fff;--surface:#f6f6f6;--border:#e6e6e6;--border-dk:#c8c8c8;--text:#111;--muted:#999;--green:#15803d}
+body{background:var(--bg);color:var(--text);font-family:'Geist','Helvetica Neue',sans-serif;min-height:100vh;overflow-x:hidden}
+header{padding:18px 44px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(255,255,255,0.95);backdrop-filter:blur(14px);z-index:20}
+.logo{display:flex;align-items:center;gap:7px}
+.ldot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
+.ltitle{font-size:14px;font-weight:500;letter-spacing:-.3px}
+.hright{display:flex;align-items:center;gap:12px}
+.livepill{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:500;letter-spacing:1px;color:var(--green);text-transform:uppercase;font-family:'Geist Mono',monospace}
+.ts{font-size:10px;color:var(--muted);font-family:'Geist Mono',monospace}
+main{padding:40px 44px 80px}
+.ptitle{font-size:clamp(22px,3.5vw,36px);font-weight:300;letter-spacing:-1.4px;margin-bottom:4px}
+.psub{font-size:12px;color:var(--muted);margin-bottom:40px}
+.tabs{display:flex;border:1px solid var(--border);border-radius:7px;width:fit-content;margin-bottom:24px;overflow:hidden;flex-wrap:wrap}
+.tab{padding:7px 15px;font-size:12px;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .13s;border-right:1px solid var(--border);font-family:'Geist',sans-serif;white-space:nowrap}
+.tab:last-child{border-right:none}
+.tab:hover{color:var(--text);background:var(--surface)}
+.tab.active{background:var(--text);color:#fff}
+.ctrls{display:flex;gap:9px;margin-bottom:20px;align-items:center;flex-wrap:wrap}
+.swrap{position:relative;flex:1;max-width:270px}
+.swrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.sinput{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 11px 8px 32px;font-size:12px;color:var(--text);font-family:'Geist',sans-serif;outline:none;transition:border .13s}
+.sinput::placeholder{color:var(--muted)}
+.sinput:focus{border-color:var(--border-dk)}
+.clabel{font-size:11px;color:var(--muted);font-family:'Geist Mono',monospace;margin-left:auto}
+.sbar{display:flex;gap:32px;padding:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:22px;flex-wrap:wrap}
+.stat{display:flex;flex-direction:column;gap:2px}
+.sv{font-size:17px;font-weight:300;letter-spacing:-.4px}
+.sl{font-size:10px;color:var(--muted);font-family:'Geist Mono',monospace;text-transform:uppercase;letter-spacing:.7px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(218px,1fr));gap:1px;border:1px solid var(--border);border-radius:11px;overflow:hidden;background:var(--border)}
+.card{background:var(--bg);padding:16px 18px;cursor:pointer;transition:background .12s;animation:fadeUp .3s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.card:hover{background:var(--surface)}
+.ctop{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.av{width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--muted);letter-spacing:-.1px}
+.av img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+.cinfo{flex:1;min-width:0}
+.cname{font-size:13px;font-weight:500;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctag{font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cworth{font-size:21px;font-weight:300;letter-spacing:-.7px;margin-bottom:9px}
+.cur{font-size:12px;color:var(--muted);font-weight:400;margin-right:1px}
+.cfoot{display:flex;align-items:center;justify-content:space-between;padding-top:9px;border-top:1px solid var(--border)}
+.csrc{font-size:9px;color:var(--muted);font-family:'Geist Mono',monospace}
+.rbadge{font-size:9px;font-family:'Geist Mono',monospace;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px}
+.empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted);background:var(--bg);font-size:13px}
+
+/* MODAL */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,0.16);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px;opacity:0;pointer-events:none;transition:opacity .18s;backdrop-filter:blur(7px)}
+.ov.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg);border:1px solid var(--border);border-radius:14px;width:100%;max-width:510px;max-height:88vh;overflow-y:auto;transform:translateY(12px) scale(.985);transition:transform .2s cubic-bezier(.16,1,.3,1);box-shadow:0 14px 44px rgba(0,0,0,0.09)}
+.ov.open .modal{transform:translateY(0) scale(1)}
+.modal::-webkit-scrollbar{width:3px}
+.modal::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.mhdr{display:flex;align-items:flex-start;gap:14px;padding:20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);border-radius:14px 14px 0 0;z-index:1}
+.mav{width:56px;height:56px;border-radius:50%;overflow:hidden;background:var(--surface);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500;color:var(--muted)}
+.mav img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+.mtblock{flex:1;min-width:0}
+.mname{font-size:16px;font-weight:500;letter-spacing:-.3px}
+.mtag{font-size:11px;color:var(--muted);margin-top:2px}
+.mwrow{display:flex;align-items:baseline;gap:8px;margin-top:5px}
+.mworth{font-size:24px;font-weight:300;letter-spacing:-.7px}
+.msrc{font-size:10px;color:var(--muted);font-family:'Geist Mono',monospace}
+.mclose{width:26px;height:26px;border-radius:50%;flex-shrink:0;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;transition:all .13s}
+.mclose:hover{background:var(--surface);color:var(--text)}
+.mbody{padding:20px;display:flex;flex-direction:column;gap:20px}
+.slabel{font-size:9px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-family:'Geist Mono',monospace;margin-bottom:9px}
+.biotext{font-size:13px;font-weight:300;line-height:1.72;color:var(--text)}
+.bars{display:flex;flex-direction:column;gap:9px}
+.brow{display:flex;flex-direction:column;gap:4px}
+.blabel{display:flex;justify-content:space-between;font-size:11px}
+.blabel span:last-child{color:var(--muted);font-family:'Geist Mono',monospace}
+.btrack{height:3px;background:var(--surface);border-radius:2px;overflow:hidden}
+.bfill{height:100%;background:var(--text);border-radius:2px;width:0;transition:width 1.1s cubic-bezier(.16,1,.3,1)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.fbox{background:var(--surface);border-radius:7px;padding:10px 12px;border:1px solid var(--border)}
+.fval{font-size:13px;font-weight:400;letter-spacing:-.2px;margin-bottom:2px;line-height:1.3}
+.fkey{font-size:9px;color:var(--muted);font-family:'Geist Mono',monospace;text-transform:uppercase;letter-spacing:.7px}
+.qblock{border-left:2px solid var(--border);padding-left:12px;font-size:12px;font-style:italic;color:var(--muted);line-height:1.65;font-weight:300}
+@media(max-width:580px){header,main{padding:16px}grid{grid-template-columns:1fr}.sbar{gap:16px}.fgrid{grid-template-columns:1fr}.mbody{padding:16px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="ldot"></div><span class="ltitle">RealTimeNetWorth</span></div>
+  <div class="hright"><div class="livepill"><div class="ldot"></div>Live</div><div class="ts" id="ts">—</div></div>
+</header>
+<main>
+  <h1 class="ptitle">Real-Time Net Worth Tracker</h1>
+  <p class="psub">150+ famous people · Click any card for full wealth breakdown · Data: Forbes & Bloomberg 2024–2025</p>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-cat="all">All</button>
+    <button class="tab" data-cat="entrepreneur">Entrepreneurs</button>
+    <button class="tab" data-cat="artist">Artists</button>
+    <button class="tab" data-cat="football">Football</button>
+    <button class="tab" data-cat="celebrity">Celebrities</button>
+    <button class="tab" data-cat="athlete">Athletes</button>
+    <button class="tab" data-cat="actor">Actors</button>
+  </div>
+  <div class="ctrls">
+    <div class="swrap">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="sinput" id="si" placeholder="Search name or industry…"/>
+    </div>
+    <span class="clabel" id="cl">— people</span>
+  </div>
+  <div class="sbar">
+    <div class="stat"><span class="sv" id="stot">—</span><span class="sl">Total Tracked</span></div>
+    <div class="stat"><span class="sv" id="scnt">—</span><span class="sl">People</span></div>
+    <div class="stat"><span class="sv" id="stop">—</span><span class="sl">Richest</span></div>
+    <div class="stat"><span class="sv" id="savg">—</span><span class="sl">Average</span></div>
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+<div class="ov" id="ov">
+  <div class="modal">
+    <div class="mhdr" id="mhdr"></div>
+    <div class="mbody" id="mbody"></div>
+  </div>
+</div>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA — Forbes Real-Time Billionaires / Bloomberg 2024-2025
+// ═══════════════════════════════════════════════════════════════
+const P=[
+// ── ENTREPRENEURS ───────────────────────────────────────────
+{n:"Elon Musk",cat:"entrepreneur",tag:"Tesla · SpaceX · X · xAI",w:342,u:"B",rank:"#1 World",src:"Forbes Mar 2025",wiki:"Elon_Musk",
+bio:"Elon Musk built his fortune by co-founding PayPal, then investing the proceeds into Tesla and SpaceX. His wealth exploded after Tesla's 2020–21 rally and further grew through X (Twitter) and xAI, making him the first person to exceed $300B.",
+ws:[{l:"Tesla equity",p:38},{l:"SpaceX equity",p:32},{l:"xAI",p:15},{l:"X (Twitter)",p:8},{l:"Other",p:7}],
+facts:[{k:"Born",v:"1971, South Africa"},{k:"Nationality",v:"🇺🇸 American"},{k:"Companies founded",v:"6+ major ventures"},{k:"Industry",v:"EV · Space · AI"}],
+q:"When something is important enough, you do it even if the odds are not in your favor."},
+
+{n:"Jeff Bezos",cat:"entrepreneur",tag:"Amazon · Blue Origin",w:233,u:"B",rank:"#2 World",src:"Forbes Mar 2025",wiki:"Jeff_Bezos",
+bio:"Jeff Bezos founded Amazon in 1994 as an online bookstore and grew it into the world's largest e-commerce and cloud platform. AWS became its most profitable unit. He stepped down as CEO in 2021 to focus on Blue Origin.",
+ws:[{l:"Amazon equity",p:72},{l:"Blue Origin",p:14},{l:"Real estate",p:9},{l:"Bezos Expeditions",p:5}],
+facts:[{k:"Born",v:"1964, New Mexico, USA"},{k:"Founded Amazon",v:"1994"},{k:"Industry",v:"E-commerce · Cloud"},{k:"Philanthropy",v:"Bezos Earth Fund"}],
+q:"Your brand is what other people say about you when you're not in the room."},
+
+{n:"Mark Zuckerberg",cat:"entrepreneur",tag:"Meta · Facebook · Instagram · WhatsApp",w:216,u:"B",rank:"#3 World",src:"Forbes Mar 2025",wiki:"Mark_Zuckerberg",
+bio:"Mark Zuckerberg co-founded Facebook from his Harvard dorm in 2004. Meta now owns Facebook, Instagram, and WhatsApp. After a brutal 2022 stock crash, Meta rebounded strongly through AI-driven ad revenue and his 'Year of Efficiency' cost cuts.",
+ws:[{l:"Meta Platforms equity",p:89},{l:"Real estate",p:6},{l:"Other investments",p:5}],
+facts:[{k:"Born",v:"1984, New York, USA"},{k:"Founded Facebook",v:"2004, age 19"},{k:"Monthly active users",v:"3.3B+"},{k:"Industry",v:"Social Media · AI"}],
+q:"The biggest risk is not taking any risk."},
+
+{n:"Bernard Arnault",cat:"entrepreneur",tag:"LVMH · Louis Vuitton · Dior · Moët",w:155,u:"B",rank:"#5 World",src:"Forbes Mar 2025",wiki:"Bernard_Arnault",
+bio:"Bernard Arnault is the chairman and CEO of LVMH, the world's largest luxury goods company with 75+ brands including Louis Vuitton, Dior, Moët & Chandon, and Sephora. He transformed LVMH into a $400B+ empire through aggressive acquisitions.",
+ws:[{l:"LVMH equity",p:85},{l:"Christian Dior stake",p:10},{l:"Real estate & art",p:5}],
+facts:[{k:"Born",v:"1949, Roubaix, France"},{k:"LVMH brands",v:"75+"},{k:"Industry",v:"Luxury Goods"},{k:"HQ",v:"Paris, France"}],
+q:"In luxury, you have to build on heritage."},
+
+{n:"Larry Ellison",cat:"entrepreneur",tag:"Oracle Corporation · Tesla board",w:195,u:"B",rank:"#4 World",src:"Forbes Mar 2025",wiki:"Larry_Ellison",
+bio:"Larry Ellison co-founded Oracle in 1977, building it into the world's largest enterprise software company. His wealth spiked as Oracle pivoted into cloud computing and AI infrastructure, competing with AWS and Azure.",
+ws:[{l:"Oracle equity",p:80},{l:"Real estate & yachts",p:10},{l:"Tesla shares",p:6},{l:"Other",p:4}],
+facts:[{k:"Born",v:"1944, New York, USA"},{k:"Founded Oracle",v:"1977"},{k:"Industry",v:"Enterprise Software"},{k:"Hobby",v:"America's Cup sailing"}],
+q:"I have had all of the disadvantages required for success."},
+
+{n:"Warren Buffett",cat:"entrepreneur",tag:"Berkshire Hathaway · Oracle of Omaha",w:168,u:"B",rank:"#6 World",src:"Forbes Mar 2025",wiki:"Warren_Buffett",
+bio:"Warren Buffett built his fortune through value investing. As CEO of Berkshire Hathaway he acquired GEICO, See's Candies, and stakes in Apple, Bank of America, and Coca-Cola. He has pledged to donate 99% of his wealth.",
+ws:[{l:"Berkshire Hathaway equity",p:99},{l:"Other investments",p:1}],
+facts:[{k:"Born",v:"1930, Omaha, USA"},{k:"First stock purchase",v:"Age 11"},{k:"Pledged to donate",v:"99% of wealth"},{k:"Nickname",v:"Oracle of Omaha"}],
+q:"Price is what you pay. Value is what you get."},
+
+{n:"Amancio Ortega",cat:"entrepreneur",tag:"Inditex · Zara · Real estate",w:118,u:"B",rank:"#12 World",src:"Forbes Mar 2025",wiki:"Amancio_Ortega",
+bio:"Amancio Ortega co-founded Inditex, the world's largest fashion retailer, owner of Zara, Massimo Dutti, and Pull&Bear. He stepped down as chairman in 2011 but retains a ~59% stake. He invests heavily in prime real estate across Europe and the US.",
+ws:[{l:"Inditex (Zara) equity",p:70},{l:"Real estate (Pontegadea)",p:28},{l:"Other",p:2}],
+facts:[{k:"Born",v:"1936, León, Spain"},{k:"Founded Zara",v:"1975"},{k:"Industry",v:"Fast Fashion"},{k:"Stores worldwide",v:"7,000+"}],
+q:"The fashion world moves faster than anyone expects."},
+
+{n:"Mukesh Ambani",cat:"entrepreneur",tag:"Reliance Industries · Jio · Retail",w:115,u:"B",rank:"Richest in Asia",src:"Forbes Mar 2025",wiki:"Mukesh_Ambani",
+bio:"Mukesh Ambani chairs Reliance Industries, India's most valuable company, spanning oil refining, petrochemicals, telecom (Jio), and retail. Jio disrupted India's telecom market with free data, adding 400M subscribers. He is the richest person in Asia.",
+ws:[{l:"Reliance Industries equity",p:70},{l:"Jio Platforms",p:20},{l:"Reliance Retail",p:8},{l:"Other",p:2}],
+facts:[{k:"Born",v:"1957, Aden, Yemen"},{k:"Nationality",v:"🇮🇳 Indian"},{k:"Jio subscribers",v:"450M+"},{k:"Industry",v:"Energy · Telecom · Retail"}],
+q:"Growth is life."},
+
+{n:"Gautam Adani",cat:"entrepreneur",tag:"Adani Group · Ports · Energy",w:84,u:"B",rank:"Top 15 World",src:"Forbes Mar 2025",wiki:"Gautam_Adani",
+bio:"Gautam Adani built the Adani Group into a conglomerate spanning ports, airports, energy, and infrastructure. He briefly became the second-richest person in the world in 2022 before a Hindenburg Research report caused a massive stock selloff in early 2023.",
+ws:[{l:"Adani Enterprises",p:30},{l:"Adani Ports",p:25},{l:"Adani Green Energy",p:25},{l:"Other Adani cos.",p:20}],
+facts:[{k:"Born",v:"1962, Ahmedabad, India"},{k:"Industry",v:"Ports · Energy · Infra"},{k:"Airports operated",v:"7 in India"},{k:"Nationality",v:"🇮🇳 Indian"}],
+q:"Risk comes from not knowing what you're doing."},
+
+{n:"Carlos Slim",cat:"entrepreneur",tag:"América Móvil · Telmex · Grupo Carso",w:93,u:"B",rank:"Richest in Latin America",src:"Forbes Mar 2025",wiki:"Carlos_Slim",
+bio:"Carlos Slim Helú is the richest person in Latin America, with his fortune built through América Móvil, the largest telecom company in the Americas. He was the world's richest person from 2010–2013. His Grupo Carso conglomerate spans retail, mining, and real estate.",
+ws:[{l:"América Móvil",p:55},{l:"Grupo Carso",p:25},{l:"Real estate",p:12},{l:"Other",p:8}],
+facts:[{k:"Born",v:"1940, Mexico City, Mexico"},{k:"Industry",v:"Telecoms · Conglomerate"},{k:"World richest",v:"2010–2013"},{k:"Nationality",v:"🇲🇽 Mexican"}],
+q:"When there is a crisis, that's when some are interested in getting out and that's when we are interested in getting in."},
+
+{n:"Françoise Bettencourt Meyers",cat:"entrepreneur",tag:"L'Oréal heiress",w:80,u:"B",rank:"Richest Woman World",src:"Forbes Mar 2025",wiki:"Françoise_Bettencourt_Meyers",
+bio:"Françoise Bettencourt Meyers is the world's richest woman and granddaughter of L'Oréal founder Eugène Schueller. She and her family hold about a 35% stake in L'Oréal, the world's largest cosmetics company. She is also a noted author of Biblical commentaries.",
+ws:[{l:"L'Oréal equity",p:96},{l:"Other investments",p:4}],
+facts:[{k:"Born",v:"1953, Paris, France"},{k:"Inherited stake from",v:"Mother Liliane Bettencourt"},{k:"Industry",v:"Cosmetics"},{k:"L'Oréal brands",v:"36+ brands"}],
+q:""},
+
+{n:"Larry Page",cat:"entrepreneur",tag:"Google · Alphabet · CapitalG",w:142,u:"B",rank:"#9 World",src:"Forbes Mar 2025",wiki:"Larry_Page",
+bio:"Larry Page co-founded Google with Sergey Brin in 1998 while both were Stanford PhD students. Google became the world's most visited website and Page served as Alphabet CEO until 2019. He is reportedly investing in flying cars (Kitty Hawk) and longevity research.",
+ws:[{l:"Alphabet (Google) equity",p:90},{l:"CapitalG investments",p:6},{l:"Other ventures",p:4}],
+facts:[{k:"Born",v:"1973, Michigan, USA"},{k:"Founded Google",v:"1998"},{k:"Industry",v:"Search · Cloud · AI"},{k:"Passion project",v:"Kitty Hawk flying cars"}],
+q:"Always deliver more than expected."},
+
+{n:"Sergey Brin",cat:"entrepreneur",tag:"Google · Alphabet",w:135,u:"B",rank:"#10 World",src:"Forbes Mar 2025",wiki:"Sergey_Brin",
+bio:"Sergey Brin co-founded Google with Larry Page in 1998. He served as Alphabet President until 2019 then stepped back. Brin returned to Alphabet in 2023 to assist with AI development and has been involved in Google DeepMind's work.",
+ws:[{l:"Alphabet (Google) equity",p:91},{l:"Personal ventures",p:5},{l:"Real estate",p:4}],
+facts:[{k:"Born",v:"1973, Moscow, Russia"},{k:"Emigrated to USA",v:"Age 6"},{k:"Industry",v:"Technology · AI"},{k:"Google PageRank",v:"Co-invented"}],
+q:"We want Google to be the third half of your brain."},
+
+{n:"Jensen Huang",cat:"entrepreneur",tag:"NVIDIA · GPU · AI Chips",w:116,u:"B",rank:"#14 World",src:"Forbes Mar 2025",wiki:"Jensen_Huang",
+bio:"Jensen Huang co-founded NVIDIA in 1993 and transformed it from a gaming GPU company into the critical backbone of AI training. NVIDIA's H100 and Blackwell chips became essential for training LLMs, causing the stock to surge over 200% in 2023 and pushing NVIDIA's market cap past $3 trillion.",
+ws:[{l:"NVIDIA equity",p:96},{l:"Real estate & other",p:4}],
+facts:[{k:"Born",v:"1963, Taipei, Taiwan"},{k:"Founded NVIDIA",v:"1993"},{k:"NVIDIA peak value",v:"$3.3T (June 2024)"},{k:"Industry",v:"Semiconductors · AI"}],
+q:"NVIDIA is at the intersection of the most powerful forces in technology."},
+
+{n:"Steve Ballmer",cat:"entrepreneur",tag:"Microsoft · LA Clippers",w:121,u:"B",rank:"#15 World",src:"Forbes Mar 2025",wiki:"Steve_Ballmer",
+bio:"Steve Ballmer was Microsoft's first business manager, joining in 1980, and served as CEO 2000–2014. He purchased the LA Clippers in 2014 for $2B — then the highest price for a sports team. His Microsoft stock holdings have made him one of the 20 richest people alive.",
+ws:[{l:"Microsoft equity",p:85},{l:"LA Clippers",p:10},{l:"Other investments",p:5}],
+facts:[{k:"Born",v:"1956, Detroit, USA"},{k:"Microsoft tenure",v:"1980–2014"},{k:"LA Clippers paid",v:"$2B in 2014"},{k:"Industry",v:"Tech · Sports"}],
+q:"Developers, developers, developers!"},
+
+{n:"Michael Bloomberg",cat:"entrepreneur",tag:"Bloomberg LP · Former NYC Mayor",w:94,u:"B",rank:"Top 20 World",src:"Forbes Mar 2025",wiki:"Michael_Bloomberg",
+bio:"Michael Bloomberg founded Bloomberg LP in 1981 after being fired from Salomon Brothers, and the Bloomberg Terminal became the financial world's essential data tool. He served three terms as NYC Mayor and ran for the 2020 Democratic presidential nomination.",
+ws:[{l:"Bloomberg LP (88% stake)",p:90},{l:"Real estate",p:6},{l:"Philanthropy",p:4}],
+facts:[{k:"Born",v:"1942, Massachusetts, USA"},{k:"Founded Bloomberg LP",v:"1981"},{k:"NYC Mayor",v:"2002–2013"},{k:"Donated",v:"$15B+ lifetime"}],
+q:"In a world changing quickly, the only strategy guaranteed to fail is not taking risks."},
+
+{n:"Jack Ma",cat:"entrepreneur",tag:"Alibaba · Ant Group · Retired",w:28,u:"B",rank:"Former Asia #1",src:"Forbes 2024",wiki:"Jack_Ma",
+bio:"Jack Ma co-founded Alibaba in 1999 and built it into China's largest e-commerce company. He also founded Ant Group (Alipay). After delivering a speech criticizing Chinese regulators in 2020, the Chinese government blocked Ant's IPO and Ma largely stepped back from public life.",
+ws:[{l:"Alibaba equity",p:65},{l:"Ant Group stake",p:25},{l:"Other investments",p:10}],
+facts:[{k:"Born",v:"1964, Hangzhou, China"},{k:"Founded Alibaba",v:"1999"},{k:"Industry",v:"E-commerce · Fintech"},{k:"Teachers rejected from",v:"Applied to Harvard 10 times"}],
+q:"Today is difficult, tomorrow is more difficult, but the day after tomorrow is beautiful."},
+
+{n:"Zhang Yiming",cat:"entrepreneur",tag:"ByteDance · TikTok · Douyin",w:49,u:"B",rank:"China Tech #1",src:"Forbes 2024",wiki:"Zhang_Yiming",
+bio:"Zhang Yiming founded ByteDance in 2012, which owns TikTok (international) and Douyin (China). TikTok reached 1 billion active users faster than any platform in history. Zhang stepped down as CEO in 2021 but retains majority control through a dual-class share structure.",
+ws:[{l:"ByteDance (TikTok) equity",p:98},{l:"Other investments",p:2}],
+facts:[{k:"Born",v:"1983, Longyan, China"},{k:"Founded ByteDance",v:"2012"},{k:"TikTok active users",v:"1.7B+"},{k:"Industry",v:"Social Media · AI"}],
+q:""},
+
+{n:"Masayoshi Son",cat:"entrepreneur",tag:"SoftBank · Vision Fund · Early Alibaba",w:25,u:"B",rank:"Japan Richest",src:"Forbes 2024",wiki:"Masayoshi_Son",
+bio:"Masayoshi Son founded SoftBank in 1981 and made one of history's greatest VC bets — investing $20M in Alibaba in 2000, which later became worth $140B. His $100B Vision Fund invested in Uber, WeWork, DoorDash, and hundreds of tech startups with mixed results.",
+ws:[{l:"SoftBank equity",p:60},{l:"ARM Holdings stake",p:25},{l:"Other fund stakes",p:15}],
+facts:[{k:"Born",v:"1957, Tosu, Japan"},{k:"SoftBank founded",v:"1981"},{k:"Alibaba stake gain",v:"$20M → $100B+"},{k:"Industry",v:"Telecoms · Venture Capital"}],
+q:"I lost $70 billion in the dot-com crash. I just kept going."},
+
+{n:"Peter Thiel",cat:"entrepreneur",tag:"PayPal · Palantir · Founders Fund",w:9.5,u:"B",rank:"Silicon Valley Icon",src:"Forbes 2024",wiki:"Peter_Thiel",
+bio:"Peter Thiel co-founded PayPal with Elon Musk and was Facebook's first outside investor, buying 10.2% for $500K in 2004. He co-founded Palantir Technologies and Founders Fund, and is known as a contrarian thinker and libertarian political activist.",
+ws:[{l:"Palantir equity",p:45},{l:"Founders Fund investments",p:35},{l:"Real estate & other",p:20}],
+facts:[{k:"Born",v:"1967, Frankfurt, Germany"},{k:"PayPal co-founded",v:"1998"},{k:"Facebook investment",v:"$500K → $1B+"},{k:"Industry",v:"Fintech · Defense Tech · VC"}],
+q:"Competition is for losers."},
+
+{n:"Reed Hastings",cat:"entrepreneur",tag:"Netflix · Co-founder",w:5.5,u:"B",rank:"Streaming Pioneer",src:"Forbes 2024",wiki:"Reed_Hastings",
+bio:"Reed Hastings co-founded Netflix in 1997, initially as a DVD rental service, then pivoted to streaming in 2007. Netflix grew to 260M+ subscribers worldwide. He stepped down as co-CEO in 2023 after 25 years leading the company.",
+ws:[{l:"Netflix equity",p:75},{l:"Real estate",p:15},{l:"Other investments",p:10}],
+facts:[{k:"Born",v:"1960, Massachusetts, USA"},{k:"Netflix founded",v:"1997"},{k:"Subscribers",v:"260M+ worldwide"},{k:"Stepped down",v:"2023"}],
+q:"The best thing about the internet is that it is perfectly global."},
+
+{n:"Evan Spiegel",cat:"entrepreneur",tag:"Snapchat · Snap Inc.",w:6.3,u:"B",rank:"Youngest Billionaires",src:"Forbes 2024",wiki:"Evan_Spiegel",
+bio:"Evan Spiegel co-founded Snapchat in 2011 while at Stanford, famously turning down a $3B acquisition offer from Facebook. He led Snap's 2017 IPO and continues as CEO. Snap's AR glasses and Stories format pioneered features later copied by Instagram and TikTok.",
+ws:[{l:"Snap Inc. equity",p:90},{l:"Real estate & other",p:10}],
+facts:[{k:"Born",v:"1990, Los Angeles, USA"},{k:"Founded Snapchat",v:"2011, age 21"},{k:"Turned down Facebook",v:"$3B offer (2013)"},{k:"Married to",v:"Miranda Kerr (2017)"}],
+q:"Snapchat isn't about capturing the traditional Kodak moment."},
+
+{n:"Jack Dorsey",cat:"entrepreneur",tag:"Twitter/X · Block (Square) · Bluesky",w:6,u:"B",rank:"Serial Founder",src:"Forbes 2024",wiki:"Jack_Dorsey",
+bio:"Jack Dorsey co-founded Twitter in 2006 and Square (now Block) in 2009. He sold Twitter to Elon Musk in 2022 for $44B. His Block company runs the Cash App payments platform and has made significant investments in Bitcoin. He has since founded Bluesky, a decentralized social network.",
+ws:[{l:"Block (Square) equity",p:60},{l:"Bitcoin holdings",p:25},{l:"Real estate & other",p:15}],
+facts:[{k:"Born",v:"1976, Missouri, USA"},{k:"Twitter co-founded",v:"2006"},{k:"Block/Square founded",v:"2009"},{k:"Industry",v:"Fintech · Social Media"}],
+q:"Make every detail perfect and limit the number of details to perfect."},
+
+{n:"Sam Altman",cat:"entrepreneur",tag:"OpenAI CEO · Y Combinator",w:2.8,u:"B",rank:"AI Pioneer",src:"Bloomberg 2025",wiki:"Sam_Altman",
+bio:"Sam Altman became CEO of OpenAI in 2019 after leading Y Combinator. ChatGPT reached 100M users in 2 months — the fastest product adoption in history. Despite limited OpenAI equity, his net worth grew through investments in Helion Energy, Reddit, and Stripe.",
+ws:[{l:"Helion Energy",p:30},{l:"Other tech investments",p:40},{l:"Real estate",p:20},{l:"OpenAI options",p:10}],
+facts:[{k:"Born",v:"1985, Missouri, USA"},{k:"Joined OpenAI",v:"2019"},{k:"ChatGPT launched",v:"November 2022"},{k:"Industry",v:"AI · Venture Capital"}],
+q:"The best thing you can do for the world is to not hold yourself back."},
+
+// ── ARTISTS & MUSICIANS ───────────────────────────────────────
+{n:"Jay-Z",cat:"artist",tag:"Rapper · Armand de Brignac · D'Ussé",w:2.5,u:"B",rank:"#1 Rapper",src:"Forbes 2024",wiki:"Jay-Z",
+bio:"Jay-Z became the first rapper-billionaire. His wealth comes from entrepreneurship: Armand de Brignac champagne (50% sold to LVMH), D'Ussé cognac with Bacardi, Tidal streaming, and VC stakes via Marcy Venture Partners.",
+ws:[{l:"Armand de Brignac",p:30},{l:"D'Ussé cognac",p:20},{l:"Tidal & music",p:15},{l:"Art & real estate",p:20},{l:"VC investments",p:15}],
+facts:[{k:"Born",v:"1969, Brooklyn, USA"},{k:"Real name",v:"Shawn Carter"},{k:"Grammy Awards",v:"24"},{k:"Married to",v:"Beyoncé (2008)"}],
+q:"I'm not a businessman. I'm a business, man."},
+
+{n:"Rihanna",cat:"artist",tag:"Singer · Fenty Beauty · Savage X Fenty",w:1.4,u:"B",rank:"Richest Female Musician",src:"Forbes 2024",wiki:"Rihanna",
+bio:"Rihanna's billionaire status comes primarily from Fenty Beauty (launched with LVMH in 2017), which earned $100M in its first 40 days. She is the richest female musician in the world. Music is a minor fraction of her wealth.",
+ws:[{l:"Fenty Beauty (50% stake)",p:60},{l:"Savage X Fenty",p:25},{l:"Music catalog & touring",p:10},{l:"Other",p:5}],
+facts:[{k:"Born",v:"1988, Barbados"},{k:"Fenty launched",v:"2017"},{k:"Fenty year-1 revenue",v:"$100M in 40 days"},{k:"Grammy Awards",v:"9"}],
+q:"I always believed that when you follow your heart, you rarely regret it."},
+
+{n:"Beyoncé",cat:"artist",tag:"Singer · Parkwood Entertainment · Ivy Park",w:540,u:"M",rank:"Queen B",src:"Forbes 2024",wiki:"Beyoncé",
+bio:"Beyoncé Knowles-Carter built a music and business empire through Parkwood Entertainment, Ivy Park (Adidas collab), and Renaissance World Tour — which grossed $580M. She manages her own career, owns her masters, and commands $24M per concert night.",
+ws:[{l:"Music catalog & touring",p:45},{l:"Ivy Park (Adidas)",p:20},{l:"Parkwood Entertainment",p:20},{l:"Real estate",p:15}],
+facts:[{k:"Born",v:"1981, Houston, USA"},{k:"Grammy Awards",v:"32 (most of any artist)"},{k:"Renaissance Tour gross",v:"$580M"},{k:"Industry",v:"Music · Fashion · Film"}],
+q:"Power is not given to you. You have to take it."},
+
+{n:"Paul McCartney",cat:"artist",tag:"The Beatles · Wings · MPL Communications",w:1.3,u:"B",rank:"Richest UK Musician",src:"Sunday Times 2024",wiki:"Paul_McCartney",
+bio:"Paul McCartney's fortune is built on MPL Communications, which owns thousands of music publishing rights including Buddy Holly's catalog. He earns from decades of Beatles royalties, record-breaking tours, and real estate.",
+ws:[{l:"MPL Communications",p:50},{l:"Touring revenue",p:25},{l:"Real estate",p:15},{l:"Album royalties",p:10}],
+facts:[{k:"Born",v:"1942, Liverpool, UK"},{k:"Beatles era",v:"1960–1970"},{k:"Grammy Awards",v:"18"},{k:"No.1 hits",v:"30+ with The Beatles"}],
+q:"If slaughterhouses had glass walls, everyone would be a vegetarian."},
+
+{n:"Taylor Swift",cat:"artist",tag:"Singer-Songwriter · Eras Tour · Taylor's Version",w:1.1,u:"B",rank:"Music Billionaire",src:"Forbes Oct 2024",wiki:"Taylor_Swift",
+bio:"Taylor Swift became a billionaire in 2023, the first musician to do so through music alone — not side businesses. The Eras Tour became the highest-grossing concert tour in history, exceeding $2B. She re-recorded her first six albums to reclaim ownership.",
+ws:[{l:"Eras Tour & touring",p:40},{l:"Music catalog & masters",p:35},{l:"Streaming & royalties",p:15},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1989, Pennsylvania, USA"},{k:"Debut album",v:"2006, age 16"},{k:"Eras Tour gross",v:"$2B+ (record)"},{k:"Grammy Awards",v:"14"}],
+q:"No matter what happens in life, be good to people."},
+
+{n:"Bruce Springsteen",cat:"artist",tag:"The Boss · E Street Band",w:1.1,u:"B",rank:"Rock Billionaire",src:"Forbes 2023",wiki:"Bruce_Springsteen",
+bio:"Bruce Springsteen became a billionaire after selling his entire music catalog and masters to Sony Music for approximately $500M in 2021 — one of the largest music catalog deals ever. He continues to tour with the E Street Band.",
+ws:[{l:"Sony catalog sale",p:55},{l:"Touring",p:30},{l:"Royalties",p:10},{l:"Real estate",p:5}],
+facts:[{k:"Born",v:"1949, New Jersey, USA"},{k:"Catalog sold",v:"~$500M to Sony, 2021"},{k:"Grammy Awards",v:"20"},{k:"Nickname",v:"The Boss"}],
+q:"The best music is there to provide something to face the world with."},
+
+{n:"Andrew Lloyd Webber",cat:"artist",tag:"Phantom · Cats · Really Useful Group",w:1.2,u:"B",rank:"Richest Composer",src:"Sunday Times 2024",wiki:"Andrew_Lloyd_Webber",
+bio:"Andrew Lloyd Webber is the most commercially successful musical theater composer of all time. Phantom of the Opera ran 35+ years on Broadway. His Really Useful Group controls rights to his catalog of shows seen by 600M+ people worldwide.",
+ws:[{l:"Really Useful Group",p:60},{l:"Theater productions",p:25},{l:"Real estate & art",p:15}],
+facts:[{k:"Born",v:"1948, London, UK"},{k:"Phantom run",v:"35 years on Broadway"},{k:"Tony Awards",v:"7"},{k:"Shows seen by",v:"600M+ people"}],
+q:"The most important thing is to never be beaten."},
+
+{n:"Madonna",cat:"artist",tag:"Queen of Pop · Madame X · Material Girl",w:850,u:"M",rank:"Richest Female Rock Artist",src:"Forbes 2024",wiki:"Madonna",
+bio:"Madonna remains the highest-grossing female touring artist of all time. Her Celebration Tour in 2023 grossed $300M+. She owns her masters for most of her catalog, runs Maverick entertainment, and has art and real estate holdings globally.",
+ws:[{l:"Tour income (career)",p:45},{l:"Music catalog & masters",p:30},{l:"Film & production",p:10},{l:"Real estate & art",p:15}],
+facts:[{k:"Born",v:"1958, Michigan, USA"},{k:"Records sold",v:"300M+"},{k:"Grammy Awards",v:"7"},{k:"Highest-grossing tours",v:"Multiple world record tours"}],
+q:"I'm tough, I'm ambitious, and I know exactly what I want."},
+
+{n:"Elton John",cat:"artist",tag:"Rocket Man · Farewell Yellow Brick Road",w:550,u:"M",rank:"Top UK Artists",src:"Sunday Times 2024",wiki:"Elton_John",
+bio:"Elton John has sold 300M+ records worldwide. His Farewell Yellow Brick Road tour (2018–2023) grossed over $900M, the second highest-grossing tour in history. He also co-wrote The Lion King soundtrack and runs Rocket Entertainment.",
+ws:[{l:"Music catalog & publishing",p:45},{l:"Touring",p:30},{l:"Merchandise & brand",p:15},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1947, Middlesex, UK"},{k:"Records sold",v:"300M+ worldwide"},{k:"Farewell Tour",v:"$900M+ gross"},{k:"Grammy Awards",v:"6"}],
+q:"I'm still standing."},
+
+{n:"Dr. Dre",cat:"artist",tag:"Rapper · Beats Electronics · Aftermath",w:500,u:"M",rank:"Top Hip-Hop Producers",src:"Forbes 2024",wiki:"Dr._Dre",
+bio:"Dr. Dre's biggest financial win was co-founding Beats Electronics with Jimmy Iovine. Apple acquired Beats in 2014 for $3B — Dre's share was ~$750M after taxes. He also discovered Eminem, 50 Cent, and Kendrick Lamar through Aftermath Entertainment.",
+ws:[{l:"Beats acquisition (Apple)",p:55},{l:"Aftermath Entertainment",p:25},{l:"Music royalties",p:12},{l:"Real estate",p:8}],
+facts:[{k:"Born",v:"1965, Compton, USA"},{k:"Real name",v:"Andre Romelle Young"},{k:"Beats sold to Apple",v:"$3B in 2014"},{k:"Artists discovered",v:"Eminem, 50 Cent, Kendrick"}],
+q:"I'd love to continue making music until I can't no more."},
+
+{n:"Drake",cat:"artist",tag:"Rapper · OVO Sound · More Life Growth Co.",w:250,u:"M",rank:"Most-Streamed Rapper",src:"Forbes 2024",wiki:"Drake",
+bio:"Drake is the most-streamed artist in Spotify history, with 24+ billion streams. His OVO Sound label and Virginia Black whiskey have supplemented music income. He earns significantly from his ownership stake in his Toronto Raptors Drake branding deals.",
+ws:[{l:"Music & streaming",p:50},{l:"OVO Sound & label",p:20},{l:"Endorsements",p:18},{l:"Real estate (Toronto)",p:12}],
+facts:[{k:"Born",v:"1986, Toronto, Canada"},{k:"Grammy Awards",v:"5"},{k:"Spotify streams",v:"24B+ (record)"},{k:"Hometown",v:"Toronto, Canada"}],
+q:"I wasn't hiding who I was. I was just waiting for the right moment."},
+
+{n:"Kanye West",cat:"artist",tag:"Rapper · Yeezy · Donda",w:400,u:"M",rank:"Hip-Hop Icons",src:"Forbes 2024",wiki:"Kanye_West",
+bio:"Kanye West's net worth peaked at $2B+ when Yeezy was still partnered with Adidas. After Adidas terminated the Yeezy deal in 2022 following his antisemitic comments, his net worth fell dramatically. He has since relaunched Yeezy independently.",
+ws:[{l:"Yeezy (independent)",p:50},{l:"Music catalog",p:30},{l:"Real estate",p:15},{l:"Other",p:5}],
+facts:[{k:"Born",v:"1977, Atlanta, USA"},{k:"Grammy Awards",v:"24"},{k:"Adidas Yeezy (peak value)",v:"$1.5B partnership"},{k:"Industry",v:"Music · Fashion"}],
+q:"Put your future in good hands — your own."},
+
+{n:"Ed Sheeran",cat:"artist",tag:"Singer-Songwriter · Gingerbread Man Records",w:300,u:"M",rank:"UK Music #2",src:"Sunday Times 2024",wiki:"Ed_Sheeran",
+bio:"Ed Sheeran is one of the world's best-selling music artists, with 150M+ albums sold. He owns his masters through Gingerbread Man Records and earns from his massive touring operation. He has been the most-streamed artist globally multiple years running.",
+ws:[{l:"Music catalog & masters",p:50},{l:"Touring",p:35},{l:"Real estate UK",p:15}],
+facts:[{k:"Born",v:"1991, Halifax, UK"},{k:"Records sold",v:"150M+"},{k:"Grammy Awards",v:"4"},{k:"Top-selling singles",v:"Shape of You, Thinking Out Loud"}],
+q:"Believe in yourself and you will be unstoppable."},
+
+{n:"Eminem",cat:"artist",tag:"Rapper · Slim Shady · Aftermath",w:250,u:"M",rank:"Top Rap Icons",src:"Forbes 2024",wiki:"Eminem",
+bio:"Eminem is one of the best-selling music artists of all time with 220M+ records sold. He was discovered by Dr. Dre and released multiple diamond-certified albums. His Shady Records label has released albums for 50 Cent and D12.",
+ws:[{l:"Music catalog",p:55},{l:"Shady Records",p:20},{l:"Touring",p:15},{l:"Real estate Michigan",p:10}],
+facts:[{k:"Born",v:"1972, Missouri, USA"},{k:"Real name",v:"Marshall Bruce Mathers III"},{k:"Grammy Awards",v:"15"},{k:"Records sold",v:"220M+"}],
+q:"I don't care if you're black, white, straight, bisexual, gay — everybody is an equal."},
+
+{n:"Bono",cat:"artist",tag:"U2 · ONE Campaign · Elevation Partners",w:700,u:"M",rank:"Rock Legends",src:"Forbes 2024",wiki:"Bono",
+bio:"Bono's wealth extends well beyond U2's music. He co-founded Elevation Partners (which invested in Facebook early), ONE Campaign anti-poverty NGO, and RED initiative. His stake in Yelp and other tech investments have significantly increased his fortune.",
+ws:[{l:"Elevation Partners (Facebook etc.)",p:35},{l:"U2 touring & catalog",p:40},{l:"Private equity & real estate",p:25}],
+facts:[{k:"Born",v:"1960, Dublin, Ireland"},{k:"Real name",v:"Paul David Hewson"},{k:"Grammy Awards",v:"22"},{k:"Nobel nominations",v:"Multiple Peace Prize noms"}],
+q:"Music can change the world because it can change people."},
+
+{n:"Dolly Parton",cat:"artist",tag:"Country Music · Dollywood · Imagination Library",w:650,u:"M",rank:"Richest Country Artist",src:"Forbes 2024",wiki:"Dolly_Parton",
+bio:"Dolly Parton owns the rights to 'I Will Always Love You' (covered by Whitney Houston, earning her millions). Her Dollywood theme park draws 3M+ visitors per year. She has donated 200M+ books to children through her Imagination Library.",
+ws:[{l:"Dollywood theme park",p:40},{l:"Music publishing & catalog",p:30},{l:"Real estate",p:15},{l:"Brand & licensing",p:15}],
+facts:[{k:"Born",v:"1946, Tennessee, USA"},{k:"Imagination Library books",v:"200M+ donated"},{k:"Grammy Awards",v:"11"},{k:"Songs written",v:"3,000+"}],
+q:"Find out who you are and do it on purpose."},
+
+{n:"Mick Jagger",cat:"artist",tag:"The Rolling Stones",w:500,u:"M",rank:"Rock Icons",src:"Sunday Times 2024",wiki:"Mick_Jagger",
+bio:"Mick Jagger and The Rolling Stones have grossed over $2B from touring. Jagger co-owns the Stones catalog and his Jagged Films produced films including Shine a Light. The Rolling Stones No Filter tour (2017–2019) grossed over $500M.",
+ws:[{l:"Rolling Stones catalog",p:45},{l:"Touring",p:35},{l:"Jagged Films",p:10},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1943, Kent, UK"},{k:"Rolling Stones founded",v:"1962"},{k:"Career tour gross",v:"$2B+"},{k:"Grammy Awards",v:"3"}],
+q:"Anything worth doing is worth overdoing."},
+
+{n:"Justin Bieber",cat:"artist",tag:"Pop Star · Hailey Bieber",w:300,u:"M",rank:"Pop Icons",src:"Forbes 2023",wiki:"Justin_Bieber",
+bio:"Justin Bieber sold his music catalog to Hipgnosis Songs for over $200M in 2022 and has been the most-streamed Canadian artist in history. He sold 150M+ records worldwide. He also launched his Drew House fashion brand and has endorsement deals with Tim Hortons.",
+ws:[{l:"Hipgnosis catalog sale",p:40},{l:"Touring & live shows",p:30},{l:"Drew House fashion",p:15},{l:"Endorsements",p:15}],
+facts:[{k:"Born",v:"1994, Ontario, Canada"},{k:"Catalog sold",v:"$200M+ to Hipgnosis"},{k:"Grammy Awards",v:"2"},{k:"Discovered by",v:"Scooter Braun, 2008"}],
+q:"No matter who you are or where you're from, you have to believe in yourself."},
+
+{n:"Lady Gaga",cat:"artist",tag:"Pop Star · Haus Laboratories · Actress",w:300,u:"M",rank:"Pop Icons",src:"Forbes 2024",wiki:"Lady_Gaga",
+bio:"Lady Gaga's wealth comes from her music career, acting (A Star is Born earned her an Oscar nomination), and Haus Laboratories beauty brand. She earned Grammy, Oscar, BAFTA, and Golden Globe in a single year (2019) — a rare EGOT near-miss.",
+ws:[{l:"Music catalog & touring",p:45},{l:"Haus Laboratories",p:25},{l:"Film & TV",p:20},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1986, New York, USA"},{k:"Real name",v:"Stefani Germanotta"},{k:"Grammy Awards",v:"13"},{k:"Oscar wins",v:"1 (Best Original Song)"}],
+q:"I'm just trying to change the world, one sequin at a time."},
+
+{n:"Mariah Carey",cat:"artist",tag:"Singer · All I Want for Christmas · Butterfly",w:350,u:"M",rank:"Music Icons",src:"Celebrity Net Worth 2024",wiki:"Mariah_Carey",
+bio:"Mariah Carey owns some of the most lucrative music publishing rights in history. 'All I Want for Christmas Is You' alone earns her an estimated $3M+ every holiday season and has earned over $60M since release. She is the best-selling female artist of all time with 200M+ records.",
+ws:[{l:"Music publishing & catalog",p:55},{l:"Touring",p:25},{l:"Brand deals & endorsements",p:12},{l:"Real estate",p:8}],
+facts:[{k:"Born",v:"1969, New York, USA"},{k:"Records sold",v:"200M+"},{k:"Grammy Awards",v:"5"},{k:"Vocal range",v:"5 octaves"}],
+q:"I'm not just another face on a magazine cover."},
+
+{n:"The Weeknd",cat:"artist",tag:"Singer · XO · After Hours",w:300,u:"M",rank:"R&B Icons",src:"Forbes 2024",wiki:"The_Weeknd",
+bio:"The Weeknd (Abel Tesfaye) rose from mixtapes uploaded to YouTube in 2011 to become one of the most-streamed artists of all time. His Super Bowl LV halftime show was watched by 96M viewers. He runs XO Records and has endorsements with Puma and H&M.",
+ws:[{l:"Music & streaming",p:50},{l:"XO Records",p:20},{l:"Touring",p:20},{l:"Endorsements",p:10}],
+facts:[{k:"Born",v:"1990, Toronto, Canada"},{k:"Real name",v:"Abel Tesfaye"},{k:"Grammy Awards",v:"4"},{k:"Super Bowl LV",v:"96M viewers"}],
+q:"I want to give people something to remember."},
+
+{n:"50 Cent",cat:"artist",tag:"Rapper · Vitamin Water · Power TV",w:40,u:"M",rank:"Hip-Hop",src:"Forbes 2023",wiki:"50_Cent",
+bio:"50 Cent's most famous financial story is receiving Vitamin Water equity instead of cash for an endorsement deal, then making $100–200M when Coca-Cola acquired Vitamin Water for $4.1B in 2007. Despite this windfall, he filed for bankruptcy in 2015 and his current net worth is modest.",
+ws:[{l:"Power TV franchise",p:40},{l:"Music royalties",p:30},{l:"Business ventures",p:20},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1975, New York, USA"},{k:"Real name",v:"Curtis James Jackson III"},{k:"Vitamin Water deal",v:"$100–200M from Coca-Cola"},{k:"Bankruptcy filed",v:"2015"}],
+q:"Get rich or die tryin'."},
+
+{n:"Diddy",cat:"artist",tag:"Rapper · Bad Boy Records · Cîroc",w:400,u:"M",rank:"Hip-Hop Icons",src:"Forbes 2023",wiki:"Sean_Combs",
+bio:"Sean Combs built Bad Boy Records, signing Biggie, Mary J. Blige, and Usher. His Cîroc vodka deal with Diageo and DeLeón tequila drove his fortune. Note: His wealth and businesses have been significantly affected by serious legal charges filed in 2024.",
+ws:[{l:"Cîroc vodka deal",p:40},{l:"Bad Boy Records",p:25},{l:"DeLeón tequila",p:15},{l:"Music & entertainment",p:20}],
+facts:[{k:"Born",v:"1969, Harlem, USA"},{k:"Real name",v:"Sean Combs"},{k:"Bad Boy founded",v:"1993"},{k:"Industry",v:"Music · Spirits"}],
+q:"Every day is a new opportunity."},
+
+// ── FOOTBALL / SOCCER ──────────────────────────────────────────
+{n:"Cristiano Ronaldo",cat:"football",tag:"Al-Nassr · Portugal · CR7 Brand",w:1.1,u:"B",rank:"#1 Football",src:"Forbes 2024",wiki:"Cristiano_Ronaldo",
+bio:"Cristiano Ronaldo became the first active footballer to become a billionaire. His Al-Nassr contract pays $200M+ annually. The CR7 brand (hotels, clothing, fragrance, gyms) earns millions independently, and his 900M+ social media following makes him the most followed person on Earth.",
+ws:[{l:"Al-Nassr salary",p:30},{l:"CR7 brand",p:35},{l:"Nike lifetime deal",p:20},{l:"Social media & endorsements",p:10},{l:"Real estate",p:5}],
+facts:[{k:"Born",v:"1985, Madeira, Portugal"},{k:"Ballon d'Or wins",v:"5"},{k:"Instagram followers",v:"600M+"},{k:"Career goals",v:"900+"}],
+q:"Your love makes me strong, your hate makes me unstoppable."},
+
+{n:"Lionel Messi",cat:"football",tag:"Inter Miami · Argentina · 8x Ballon d'Or",w:650,u:"M",rank:"#2 Football",src:"Forbes 2024",wiki:"Lionel_Messi",
+bio:"Lionel Messi has a record 8 Ballon d'Or awards and won the 2022 World Cup with Argentina. He joined Inter Miami in 2023 in a package deal including an MLS salary, Apple TV+ rights, and an equity stake in the club. He holds the record for most goals and assists in football history.",
+ws:[{l:"MLS salary (Inter Miami)",p:35},{l:"Adidas lifetime deal",p:30},{l:"Inter Miami equity",p:15},{l:"Business ventures",p:12},{l:"Real estate",p:8}],
+facts:[{k:"Born",v:"1987, Rosario, Argentina"},{k:"Ballon d'Or wins",v:"8 (record)"},{k:"World Cup won",v:"2022, Qatar"},{k:"Career goals",v:"850+"}],
+q:"I start early and I stay late. It took me 17 years to become an overnight success."},
+
+{n:"David Beckham",cat:"football",tag:"Inter Miami co-owner · England legend",w:450,u:"M",rank:"Football Legends",src:"Forbes 2024",wiki:"David_Beckham",
+bio:"David Beckham secured an Inter Miami MLS expansion slot for just $25M in 2014 — the team is now valued at $1B+ following Messi's arrival. DB Ventures manages his global brand, and his wife Victoria's fashion empire is also part of the family fortune.",
+ws:[{l:"Inter Miami ownership",p:40},{l:"DB Ventures & brand",p:35},{l:"Real estate",p:15},{l:"Media & production",p:10}],
+facts:[{k:"Born",v:"1975, London, UK"},{k:"Inter Miami fee",v:"$25M in 2014"},{k:"Club now worth",v:"$1B+"},{k:"Married to",v:"Victoria Beckham"}],
+q:"I always believed I would achieve at the highest level."},
+
+{n:"Kylian Mbappé",cat:"football",tag:"Real Madrid · France · Next Generation",w:150,u:"M",rank:"Future #1",src:"Forbes 2024",wiki:"Kylian_Mbappé",
+bio:"Mbappé joined Real Madrid on a free transfer in 2024 after ending his PSG contract. He won the World Cup with France at 19. His Nike deal is one of the most lucrative in football, and he became PSG's all-time leading scorer before departing.",
+ws:[{l:"Real Madrid salary",p:50},{l:"Nike sponsorship",p:30},{l:"Endorsements",p:12},{l:"Investments",p:8}],
+facts:[{k:"Born",v:"2002, Paris, France"},{k:"World Cup won",v:"2018 (age 19)"},{k:"PSG all-time top scorer",v:"256 goals"},{k:"2024 move",v:"Real Madrid (free transfer)"}],
+q:"I know all roads lead to one point — the best."},
+
+{n:"Neymar Jr.",cat:"football",tag:"Al-Hilal · Brazil",w:200,u:"M",rank:"Top 5 Football",src:"Forbes 2024",wiki:"Neymar",
+bio:"Neymar was the world's most expensive transfer (€222M to PSG in 2017). He has faced persistent injuries but remains one of football's most marketable stars. His NeymarJr brand and Puma deal supplement his Al-Hilal salary.",
+ws:[{l:"Al-Hilal salary",p:45},{l:"Puma & endorsements",p:30},{l:"Brazil business ventures",p:15},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1992, Brazil"},{k:"PSG transfer",v:"€222M world record"},{k:"World Cup apps",v:"4"},{k:"Poker",v:"Regular WPT participant"}],
+q:"Football is my life."},
+
+{n:"Zlatan Ibrahimović",cat:"football",tag:"AC Milan advisor · Sweden legend",w:190,u:"M",rank:"European Icons",src:"Forbes 2024",wiki:"Zlatan_Ibrahimović",
+bio:"Zlatan retired in 2023 as one of history's most prolific strikers with 570+ goals across 12 major clubs. He is part-owner of Swedish club Hammarby IF and serves as Senior Advisor at AC Milan. His autobiography 'I Am Zlatan' was a global bestseller.",
+ws:[{l:"Career earnings",p:55},{l:"Hammarby IF stake",p:20},{l:"A-Z Sports brand",p:15},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1981, Malmö, Sweden"},{k:"Career goals",v:"570+"},{k:"Major clubs played",v:"12"},{k:"Autobiography",v:"'I Am Zlatan' (bestseller)"}],
+q:"I am Zlatan."},
+
+{n:"Gareth Bale",cat:"football",tag:"Wales captain · Real Madrid legend",w:145,u:"M",rank:"Football Legends",src:"Forbes 2023",wiki:"Gareth_Bale",
+bio:"Gareth Bale became the world's most expensive player when Real Madrid signed him for €100M in 2013. He won 5 Champions League medals and is now retired, pursuing his golf interests and entrepreneurial ventures.",
+ws:[{l:"Career earnings",p:75},{l:"Investments",p:15},{l:"Golf ventures",p:10}],
+facts:[{k:"Born",v:"1989, Cardiff, Wales"},{k:"Madrid transfer",v:"€100M (2013)"},{k:"Champions League",v:"5x winner"},{k:"Retirement hobby",v:"Golf (near-scratch handicap)"}],
+q:"I always believed I'd make it."},
+
+{n:"Wayne Rooney",cat:"football",tag:"England record scorer · Manager",w:170,u:"M",rank:"England Legends",src:"Forbes 2023",wiki:"Wayne_Rooney",
+bio:"Wayne Rooney is England's all-time top scorer (53 goals) and Manchester United's record goalscorer. After retiring, he moved into management with Derby County, DC United, and Birmingham City.",
+ws:[{l:"Career earnings",p:70},{l:"Endorsements",p:15},{l:"Real estate",p:10},{l:"Management & media",p:5}],
+facts:[{k:"Born",v:"1985, Liverpool, UK"},{k:"England goals",v:"53 (all-time record)"},{k:"Man Utd goals",v:"253 (club record)"},{k:"Management",v:"Plymouth Argyle"}],
+q:"I just love playing football."},
+
+{n:"Thierry Henry",cat:"football",tag:"Arsenal legend · France · Manager",w:60,u:"M",rank:"Premier League Legends",src:"Forbes 2023",wiki:"Thierry_Henry",
+bio:"Thierry Henry is Arsenal's all-time top scorer and a World Cup & Euro winner with France. After retiring, he became a pundit for CBS Sports and managed Monaco and Belgian national team. He earns from endorsements and his role as an ambassador for leading brands.",
+ws:[{l:"Career earnings",p:55},{l:"CBS Sports punditry",p:20},{l:"Endorsements (Nike etc.)",p:15},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1977, Paris, France"},{k:"Arsenal goals",v:"228 (all-time record)"},{k:"World Cup won",v:"1998"},{k:"Premier League titles",v:"2"}],
+q:"When I play against Arsenal I don't celebrate. That's my club."},
+
+{n:"Zinedine Zidane",cat:"football",tag:"Real Madrid · France · 3x CL Manager",w:70,u:"M",rank:"Football Legends",src:"Forbes 2023",wiki:"Zinedine_Zidane",
+bio:"Zinedine Zidane is widely regarded as the greatest midfielders of all time. As player he won 3 UCL, World Cup, Euro. As Real Madrid manager (2016–2018, 2019–2021) he won 3 consecutive Champions League titles — an unprecedented feat.",
+ws:[{l:"Career earnings",p:55},{l:"Endorsements (Adidas etc.)",p:25},{l:"Real estate",p:20}],
+facts:[{k:"Born",v:"1972, Marseille, France"},{k:"Ballon d'Or wins",v:"3"},{k:"UCL as manager",v:"3 consecutive (2016–2018)"},{k:"World Cup won",v:"1998"}],
+q:"I dream a lot. But I also work hard."},
+
+{n:"Ronaldinho",cat:"football",tag:"Brazil · FC Barcelona · Fluminense",w:90,u:"M",rank:"Football Legends",src:"Forbes 2023",wiki:"Ronaldinho",
+bio:"Ronaldinho is considered one of the most skillful and entertaining players in history. He won the World Cup with Brazil in 2002 and the Ballon d'Or in 2004 and 2005 during his peak at Barcelona. He has faced financial difficulties and tax issues but remains a beloved global ambassador.",
+ws:[{l:"Career earnings",p:50},{l:"Brand ambassador deals",p:30},{l:"Business ventures Brazil",p:20}],
+facts:[{k:"Born",v:"1980, Porto Alegre, Brazil"},{k:"Ballon d'Or wins",v:"2 (2004, 2005)"},{k:"World Cup won",v:"2002"},{k:"Nationality",v:"🇧🇷 Brazilian"}],
+q:"I learned all about life with a ball at my feet."},
+
+{n:"Harry Kane",cat:"football",tag:"Bayern Munich · England captain",w:100,u:"M",rank:"Premier League Icons",src:"Forbes 2024",wiki:"Harry_Kane",
+bio:"Harry Kane joined Bayern Munich in 2023 for £100M after a decade at Tottenham. He is England's all-time top scorer, overtaking Wayne Rooney in 2023. He earns from a Adidas deal and a portfolio of UK property investments.",
+ws:[{l:"Bayern Munich salary",p:55},{l:"Adidas & endorsements",p:25},{l:"Property investments UK",p:20}],
+facts:[{k:"Born",v:"1993, London, UK"},{k:"England goals",v:"66 (all-time record)"},{k:"Bayern transfer",v:"£100M (2023)"},{k:"Industry",v:"Football · Property"}],
+q:"I just love scoring goals. That's what drives me."},
+
+{n:"Luka Modrić",cat:"football",tag:"Real Madrid · Croatia captain",w:80,u:"M",rank:"European Champions",src:"Forbes 2023",wiki:"Luka_Modrić",
+bio:"Luka Modrić won the 2018 Ballon d'Or, becoming only the second player in a decade to break Ronaldo/Messi's dominance. He captained Croatia to the 2018 World Cup Final and has won 6 Champions League titles with Real Madrid.",
+ws:[{l:"Real Madrid salary",p:60},{l:"Adidas & endorsements",p:25},{l:"Real estate & investments",p:15}],
+facts:[{k:"Born",v:"1985, Zadar, Croatia"},{k:"Ballon d'Or",v:"2018"},{k:"UCL titles",v:"6 with Real Madrid"},{k:"World Cup Final",v:"2018 (runner-up)"}],
+q:"I have never given up. And I never will."},
+
+{n:"Andrés Iniesta",cat:"football",tag:"FC Barcelona · Spain · Japan",w:120,u:"M",rank:"Spanish Legends",src:"Forbes 2023",wiki:"Andrés_Iniesta",
+bio:"Andrés Iniesta scored the winning goal of the 2010 World Cup Final. He is co-owner of Vissel Kobe (Japan) where he played 2018–2023. He also co-owns the Bodega Iniesta winery in Spain, which produces award-winning Manchuela wines.",
+ws:[{l:"Career earnings",p:50},{l:"Vissel Kobe ownership",p:20},{l:"Bodega Iniesta winery",p:20},{l:"Endorsements",p:10}],
+facts:[{k:"Born",v:"1984, Fuentealbilla, Spain"},{k:"World Cup Final goal",v:"2010 vs Netherlands"},{k:"La Liga titles",v:"9 with Barcelona"},{k:"Winery",v:"Bodega Iniesta (Manchuela)"}],
+q:"Football is not just about winning. It's about creating memories."},
+
+{n:"Didier Drogba",cat:"football",tag:"Chelsea · Ivory Coast legend",w:80,u:"M",rank:"Premier League Legends",src:"Forbes 2023",wiki:"Didier_Drogba",
+bio:"Didier Drogba scored Chelsea's equalizer in the 2012 Champions League Final and converted the winning penalty. Twice African Player of the Year, he earns from numerous African business ventures and is a UNDP Goodwill Ambassador for Africa.",
+ws:[{l:"Career earnings",p:50},{l:"Business ventures Africa",p:25},{l:"Brand ambassador deals",p:15},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1978, Abidjan, Ivory Coast"},{k:"Chelsea goals",v:"164 (all-time record)"},{k:"UCL Final goal",v:"2012 (injury time equalizer)"},{k:"UNDP role",v:"Goodwill Ambassador"}],
+q:"Football has given me everything."},
+
+{n:"Pep Guardiola",cat:"football",tag:"Manchester City manager · Coaching legend",w:200,u:"M",rank:"Best Manager Ever",src:"Forbes 2024",wiki:"Pep_Guardiola",
+bio:"Pep Guardiola is the highest-paid manager in football history, earning £20M+ annually at Manchester City. He won an unprecedented treble with City in 2023 (league, FA Cup, Champions League). He previously won 14 trophies at Barcelona and 7 at Bayern Munich.",
+ws:[{l:"Management salary (City)",p:70},{l:"Endorsements (Puma)",p:15},{l:"Real estate & investments",p:15}],
+facts:[{k:"Born",v:"1971, Santpedor, Spain"},{k:"Man City annual salary",v:"£20M+"},{k:"2023 Treble",v:"PL + FA Cup + UCL"},{k:"Total trophies managed",v:"35+"}],
+q:"When you win the treble, nobody can touch you."},
+
+{n:"José Mourinho",cat:"football",tag:"Coach · The Special One · Fenerbahçe",w:120,u:"M",rank:"Football Managers",src:"Forbes 2023",wiki:"José_Mourinho",
+bio:"José Mourinho, 'The Special One', has managed Porto, Chelsea, Inter Milan, Real Madrid, Manchester United, Tottenham, Roma, and Fenerbahçe. He won Champions League with Porto (2004) and Inter (2010) — a remarkable double in two different countries.",
+ws:[{l:"Management salary (career)",p:65},{l:"Endorsements & media",p:20},{l:"Real estate Portugal",p:15}],
+facts:[{k:"Born",v:"1963, Setúbal, Portugal"},{k:"UCL wins",v:"2 (Porto 2004, Inter 2010)"},{k:"Clubs managed",v:"10 major clubs"},{k:"Nickname",v:"The Special One"}],
+q:"I am The Special One."},
+
+// ── CELEBRITIES ────────────────────────────────────────────────
+{n:"Oprah Winfrey",cat:"celebrity",tag:"Media empire · OWN · Harpo Productions",w:2.8,u:"B",rank:"#1 Celebrity",src:"Forbes 2024",wiki:"Oprah_Winfrey",
+bio:"Oprah rose from poverty to become America's first Black female billionaire. The Oprah Winfrey Show ran 25 seasons. She owns OWN, Harpo Productions, a Weight Watchers stake, and vast real estate. She has donated $500M+ to charity.",
+ws:[{l:"OWN & Harpo",p:45},{l:"Real estate",p:25},{l:"Weight Watchers stake",p:10},{l:"Publishing & other",p:20}],
+facts:[{k:"Born",v:"1954, Mississippi, USA"},{k:"Show ran",v:"25 years (1986–2011)"},{k:"Donated",v:"$500M+"},{k:"Daytime Emmys",v:"Multiple"}],
+q:"The biggest adventure you can take is to live the life of your dreams."},
+
+{n:"Kim Kardashian",cat:"celebrity",tag:"SKIMS · SKKN · Media",w:1.7,u:"B",rank:"Billionaire Celebrity",src:"Forbes 2024",wiki:"Kim_Kardashian",
+bio:"Kim Kardashian became a billionaire through SKIMS, her shapewear company valued at $4B in 2023. She sold KKW Beauty to Coty for $200M. With 360M Instagram followers she earns $1M+ per sponsored post.",
+ws:[{l:"SKIMS (shapewear)",p:65},{l:"SKKN (skincare)",p:15},{l:"KKW sale proceeds",p:10},{l:"Media & social",p:10}],
+facts:[{k:"Born",v:"1980, Los Angeles, USA"},{k:"SKIMS founded",v:"2019"},{k:"SKIMS valuation",v:"$4B (2023)"},{k:"Instagram",v:"360M+ followers"}],
+q:"I think if I'm 40 and I don't have a TV show, I'll be okay."},
+
+{n:"Dwayne Johnson",cat:"celebrity",tag:"Actor · Teremana Tequila · XFL",w:800,u:"M",rank:"Highest-Paid Actor",src:"Forbes 2023",wiki:"Dwayne_Johnson",
+bio:"Dwayne 'The Rock' Johnson was Hollywood's highest-paid actor for multiple years. Teremana Tequila (launched 2020) became one of the fastest-growing spirits brands, selling 1M+ cases in year one. He also co-owns the XFL American football league.",
+ws:[{l:"Film salary & backend",p:40},{l:"Teremana Tequila",p:35},{l:"Seven Bucks Productions",p:15},{l:"XFL & other",p:10}],
+facts:[{k:"Born",v:"1972, California, USA"},{k:"WWE career",v:"1996–2004"},{k:"Teremana year-1",v:"1M+ cases sold"},{k:"Top films",v:"Jumanji, Fast & Furious"}],
+q:"Be humble. Be hungry. Always be the hardest worker in the room."},
+
+{n:"Kylie Jenner",cat:"celebrity",tag:"Kylie Cosmetics · Kylie Skin",w:700,u:"M",rank:"Young Billionaires",src:"Forbes 2024",wiki:"Kylie_Jenner",
+bio:"Kylie Jenner sold 51% of Kylie Cosmetics to Coty for $600M in 2020. Her Kylie Skin and Kylie Baby lines followed. With 400M Instagram followers, she earns millions per sponsored post.",
+ws:[{l:"Kylie Cosmetics (Coty deal)",p:55},{l:"Kylie Skin & Baby",p:20},{l:"Social media earnings",p:15},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"2002, Los Angeles, USA"},{k:"Kylie Cosmetics",v:"Launched 2015 (age 17)"},{k:"Coty deal",v:"$600M for 51%"},{k:"Instagram",v:"400M+ followers"}],
+q:"I feel like every year I've had a new set of goals."},
+
+{n:"Ellen DeGeneres",cat:"celebrity",tag:"Talk show host · Producer",w:500,u:"M",rank:"TV Icons",src:"Forbes 2023",wiki:"Ellen_DeGeneres",
+bio:"Ellen DeGeneres hosted The Ellen DeGeneres Show for 19 seasons (2003–2022), earning her over $50M annually at peak. She also earned from real estate ventures — buying and selling homes at profit — and multiple production deals.",
+ws:[{l:"Talk show salary & production",p:55},{l:"Real estate flipping",p:25},{l:"Endorsements",p:15},{l:"Other",p:5}],
+facts:[{k:"Born",v:"1958, Louisiana, USA"},{k:"Show ran",v:"19 seasons (2003–2022)"},{k:"Emmy Awards",v:"30+ Emmys won"},{k:"Presidential Medal",v:"Freedom (2016)"}],
+q:"Be kind to one another."},
+
+{n:"Howard Stern",cat:"celebrity",tag:"Radio King · SiriusXM · AGT Judge",w:650,u:"M",rank:"Media Icons",src:"Forbes 2023",wiki:"Howard_Stern",
+bio:"Howard Stern's $100M+ annual SiriusXM contract has made him radio's highest earner. He signed multiple renewals, with reports suggesting his cumulative SiriusXM earnings exceed $600M. He also serves as an America's Got Talent judge.",
+ws:[{l:"SiriusXM contract",p:65},{l:"Book deals & media",p:15},{l:"AGT salary",p:10},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1954, New York, USA"},{k:"SiriusXM salary",v:"$100M+ per year"},{k:"Emmy Awards",v:"3"},{k:"Book",v:"Private Parts (1993, bestseller)"}],
+q:"I tell people, don't listen to me — I'm just a guy on the radio."},
+
+{n:"Simon Cowell",cat:"celebrity",tag:"X Factor · Britain's Got Talent · Syco",w:600,u:"M",rank:"TV Mogul",src:"Forbes 2024",wiki:"Simon_Cowell",
+bio:"Simon Cowell created or produced some of the most successful talent shows in TV history: American Idol, X Factor, and Got Talent (licensed in 70+ countries). His Syco Entertainment company earns from each show, and he also manages artists including One Direction.",
+ws:[{l:"Syco Entertainment",p:50},{l:"TV production deals",p:30},{l:"Artist management",p:12},{l:"Real estate",p:8}],
+facts:[{k:"Born",v:"1959, London, UK"},{k:"Got Talent countries",v:"70+ markets"},{k:"One Direction",v:"Discovered on X Factor"},{k:"Net worth growth",v:"TV judge to mogul"}],
+q:"If you've got talent, I will find it."},
+
+{n:"Martha Stewart",cat:"celebrity",tag:"Homemaking · MSLO · Canopy Growth",w:400,u:"M",rank:"Lifestyle Icons",src:"Forbes 2023",wiki:"Martha_Stewart",
+bio:"Martha Stewart built a homemaking empire through books, TV, and her Martha Stewart Living Omnimedia (MSLO). After serving prison time for insider trading in 2004, she rebuilt. She has partnerships with Canopy Growth (cannabis) and continues to be culturally relevant in her 80s.",
+ws:[{l:"Martha Stewart Living brand",p:50},{l:"Publishing & media",p:25},{l:"Canopy Growth partnership",p:10},{l:"Real estate",p:15}],
+facts:[{k:"Born",v:"1941, New Jersey, USA"},{k:"MSLO IPO",v:"1999"},{k:"Prison sentence",v:"5 months (2004)"},{k:"Industry",v:"Lifestyle · Media"}],
+q:"Life is too complicated not to be orderly."},
+
+{n:"Paris Hilton",cat:"celebrity",tag:"DJ · 11:11 Media · Paris Hilton brand",w:300,u:"M",rank:"OG Influencer",src:"Forbes 2023",wiki:"Paris_Hilton",
+bio:"Paris Hilton was arguably the world's first modern celebrity-influencer before social media existed. She earns $1–2M per DJ appearance and has licensed the Paris Hilton brand to 19+ product lines globally. She founded 11:11 Media as a production and content company.",
+ws:[{l:"Paris Hilton brand licensing",p:45},{l:"DJ & appearances",p:25},{l:"11:11 Media",p:20},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1981, New York, USA"},{k:"Brand licensing",v:"19+ global product lines"},{k:"DJ fee",v:"$1–2M per appearance"},{k:"Married to",v:"Carter Reum (2021)"}],
+q:"I'm a businesswoman first."},
+
+{n:"Gordon Ramsay",cat:"celebrity",tag:"Chef · 7 Michelin stars · MasterChef",w:220,u:"M",rank:"Celebrity Chefs",src:"Forbes 2024",wiki:"Gordon_Ramsay",
+bio:"Gordon Ramsay holds 7 Michelin stars and runs a global restaurant empire with 50+ restaurants in London, New York, Las Vegas, and beyond. His TV empire (Hell's Kitchen, MasterChef, Kitchen Nightmares) earns him $45M+ annually.",
+ws:[{l:"TV production & salary",p:45},{l:"Restaurant empire",p:35},{l:"Real estate",p:12},{l:"Brand deals",p:8}],
+facts:[{k:"Born",v:"1966, Johnstone, UK"},{k:"Michelin stars",v:"7 total"},{k:"TV earnings",v:"$45M+ annually"},{k:"Restaurants",v:"50+ worldwide"}],
+q:"Cooking is about passion, so it may look slightly temperamental in a way that it's too assertive to the naked eye."},
+
+{n:"Ryan Seacrest",cat:"celebrity",tag:"American Idol · E! News · Radio",w:450,u:"M",rank:"TV Presenters",src:"Forbes 2023",wiki:"Ryan_Seacrest",
+bio:"Ryan Seacrest has been one of entertainment's most prolific hosts, hosting American Idol since 2002, Live with Kelly & Ryan, and his morning radio show. He produces multiple shows through Ryan Seacrest Productions and has endorsement deals with Coca-Cola and Ticketmaster.",
+ws:[{l:"American Idol salary",p:35},{l:"Ryan Seacrest Productions",p:30},{l:"Radio & media",p:25},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1974, Georgia, USA"},{k:"American Idol",v:"Host since 2002"},{k:"Annual earnings",v:"$60M+ at peak"},{k:"Production company",v:"Ryan Seacrest Productions"}],
+q:"Work hard, be nice to people."},
+
+{n:"Tyra Banks",cat:"celebrity",tag:"Model · America's Next Top Model · ANTM",w:90,u:"M",rank:"Supermodels",src:"Celebrity Net Worth 2024",wiki:"Tyra_Banks",
+bio:"Tyra Banks was the first Black woman on the cover of Sports Illustrated and GQ. She created and hosted America's Next Top Model for 24 cycles. Her Fierce Capital fund invests in female-led businesses, and she has endorsements with Victoria's Secret and others.",
+ws:[{l:"ANTM production & hosting",p:45},{l:"Modeling & endorsements",p:30},{l:"Fierce Capital",p:15},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1973, California, USA"},{k:"ANTM cycles",v:"24"},{k:"Sports Illustrated cover",v:"First Black woman (1997)"},{k:"Industry",v:"Modeling · TV Production"}],
+q:"I love that I can make women feel good about themselves."},
+
+{n:"Kendall Jenner",cat:"celebrity",tag:"Model · 818 Tequila · Kylie's sister",w:60,u:"M",rank:"Top Models",src:"Forbes 2023",wiki:"Kendall_Jenner",
+bio:"Kendall Jenner became the world's highest-paid model in 2017, earning $22M. She launched 818 Tequila in 2021, which generated $26M+ in first-year revenue. She earns millions per Instagram post with 290M+ followers.",
+ws:[{l:"818 Tequila",p:40},{l:"Modeling (Vogue, etc.)",p:30},{l:"Instagram endorsements",p:20},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1995, Los Angeles, USA"},{k:"Highest-paid model",v:"2017 ($22M)"},{k:"818 Tequila year-1",v:"$26M+ revenue"},{k:"Instagram",v:"290M+ followers"}],
+q:"I always believe in myself."},
+
+// ── ATHLETES (non-football) ────────────────────────────────────
+{n:"Michael Jordan",cat:"athlete",tag:"NBA · Charlotte Hornets · Nike Air Jordan",w:3.0,u:"B",rank:"Richest Athlete Ever",src:"Forbes 2024",wiki:"Michael_Jordan",
+bio:"Michael Jordan is the richest former athlete in history. The majority of his $3B comes from Nike Air Jordan royalties ($1.5B+ annually for Nike). He sold the Charlotte Hornets in 2023 for $3B after buying it in 2010 for $175M.",
+ws:[{l:"Nike Air Jordan royalties",p:60},{l:"Charlotte Hornets sale",p:25},{l:"Investments & other",p:15}],
+facts:[{k:"Born",v:"1963, Brooklyn, USA"},{k:"NBA championships",v:"6 (all Bulls)"},{k:"Jordan Brand revenue",v:"$1.5B+ per year"},{k:"Hornets sold",v:"$3B in 2023"}],
+q:"I can accept failure — everyone fails at something. But I can't accept not trying."},
+
+{n:"LeBron James",cat:"athlete",tag:"LA Lakers · SpringHill · Lobos 1707",w:1.1,u:"B",rank:"#1 NBA Wealth",src:"Forbes 2024",wiki:"LeBron_James",
+bio:"LeBron James became a billionaire in 2022, the second active NBA player to do so. His SpringHill Company (media), Fenway Sports Group stake, and Lobos 1707 tequila have diversified well beyond his $47.6M NBA salary.",
+ws:[{l:"SpringHill Company",p:30},{l:"NBA career earnings",p:25},{l:"Fenway Sports Group stake",p:20},{l:"Lobos 1707 & Blaze Pizza",p:15},{l:"Endorsements",p:10}],
+facts:[{k:"Born",v:"1984, Ohio, USA"},{k:"NBA championships",v:"4"},{k:"NBA MVP awards",v:"4"},{k:"Billionaire since",v:"June 2022"}],
+q:"I like criticism. It makes you strong."},
+
+{n:"Tiger Woods",cat:"athlete",tag:"Golf · TGR Ventures · Sun Day Red",w:1.0,u:"B",rank:"#1 Golf",src:"Forbes 2024",wiki:"Tiger_Woods",
+bio:"Tiger Woods became a billionaire in 2022, only the second active athlete after Jordan. His wealth comes from endorsements, TGR Design (golf courses), and Sun Day Red (clothing brand launched with TaylorMade in 2024).",
+ws:[{l:"Endorsements (Nike 25 years, TaylorMade etc.)",p:45},{l:"TGR Ventures",p:25},{l:"Career prize money",p:15},{l:"Sun Day Red",p:10},{l:"Real estate",p:5}],
+facts:[{k:"Born",v:"1975, California, USA"},{k:"Major wins",v:"15 (3rd all-time)"},{k:"Career prize money",v:"$120M+"},{k:"Nike deal (25 years)",v:"~$500M total"}],
+q:"No matter how good you get, you can always get better."},
+
+{n:"Roger Federer",cat:"athlete",tag:"Tennis · On Running · UNIQLO",w:1.1,u:"B",rank:"#1 Tennis Wealth",src:"Forbes 2024",wiki:"Roger_Federer",
+bio:"Roger Federer became the first tennis billionaire in 2022. Much of his wealth stems from his equity stake in On Running (Swiss sportswear), which IPO'd in 2021. His UNIQLO deal (~$300M over 10 years) replaced his Nike relationship.",
+ws:[{l:"On Running equity stake",p:40},{l:"UNIQLO deal",p:30},{l:"Career prize money & endorsements",p:20},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1981, Basel, Switzerland"},{k:"Grand Slam titles",v:"20"},{k:"On Running IPO",v:"2021, stake worth $300M+"},{k:"Retired",v:"September 2022"}],
+q:"There is no way around the hard work. Embrace it."},
+
+{n:"Serena Williams",cat:"athlete",tag:"Tennis · Serena Ventures · Fashion",w:300,u:"M",rank:"Top Female Athletes",src:"Forbes 2024",wiki:"Serena_Williams",
+bio:"Serena Williams is the highest-paid female athlete in history. She launched Serena Ventures (VC fund with 60+ investments) and the Serena fashion line. She holds 23 Grand Slam singles titles, a record in the Open Era.",
+ws:[{l:"Serena Ventures",p:40},{l:"Career prize & endorsements",p:35},{l:"S by Serena fashion",p:15},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1981, Michigan, USA"},{k:"Grand Slam titles",v:"23 (Open Era record)"},{k:"VC portfolio",v:"60+ companies"},{k:"Married to",v:"Alexis Ohanian (Reddit)"}],
+q:"A champion is defined not by wins but by how they recover when they fall."},
+
+{n:"Rafael Nadal",cat:"athlete",tag:"Tennis · 22 Grand Slams · King of Clay",w:200,u:"M",rank:"Tennis Icons",src:"Forbes 2024",wiki:"Rafael_Nadal",
+bio:"Rafael Nadal holds the record with 22 Grand Slam titles and is widely considered the greatest clay-court player ever. His Rafa Nadal Academy in Mallorca is a world-class tennis academy. He has endorsement deals with Babolat, Nike, KIA, and Banco Sabadell.",
+ws:[{l:"Career prize money",p:40},{l:"Endorsements (Nike, Babolat, KIA)",p:35},{l:"Rafa Nadal Academy",p:15},{l:"Real estate Mallorca",p:10}],
+facts:[{k:"Born",v:"1986, Mallorca, Spain"},{k:"Grand Slam titles",v:"22"},{k:"French Open wins",v:"14 (record)"},{k:"Retired",v:"2024"}],
+q:"Every point is a new match."},
+
+{n:"Novak Djokovic",cat:"athlete",tag:"Tennis · 24 Grand Slams · GOAT",w:260,u:"M",rank:"Tennis GOAT",src:"Forbes 2024",wiki:"Novak_Djokovic",
+bio:"Novak Djokovic holds the record for most Grand Slam titles with 24, surpassing both Federer and Nadal. He earns from prize money, endorsements (Asics, Peugeot, Head), and his Djokovic Foundation for early childhood education in Serbia.",
+ws:[{l:"Career prize money",p:40},{l:"Endorsements",p:40},{l:"Djokovic Foundation & investments",p:12},{l:"Real estate",p:8}],
+facts:[{k:"Born",v:"1987, Belgrade, Serbia"},{k:"Grand Slam titles",v:"24 (record)"},{k:"Career prize money",v:"$180M+ (record)"},{k:"Foundation",v:"Djokovic Foundation (Serbia)"}],
+q:"The will to win does not compare with the will to prepare to win."},
+
+{n:"Lewis Hamilton",cat:"athlete",tag:"Formula 1 · 7x World Champion · XTX",w:300,u:"M",rank:"F1 Legend",src:"Forbes 2024",wiki:"Lewis_Hamilton",
+bio:"Lewis Hamilton is a 7x Formula 1 World Champion, equal with Michael Schumacher for most titles. He joined Ferrari in 2025. Beyond racing, he has invested in XTX Markets, Neat Burger (plant-based), and has fashion and music interests.",
+ws:[{l:"F1 salary (Ferrari/Mercedes)",p:55},{l:"Endorsements (Monster, Puma)",p:25},{l:"XTX & investments",p:12},{l:"Neat Burger & brand",p:8}],
+facts:[{k:"Born",v:"1985, Hertfordshire, UK"},{k:"F1 world titles",v:"7 (equal record)"},{k:"Race wins",v:"103 (record)"},{k:"Joined Ferrari",v:"2025"}],
+q:"Still I rise."},
+
+{n:"Floyd Mayweather",cat:"athlete",tag:"Boxing · TBE · Money",w:450,u:"M",rank:"Boxing Legend",src:"Forbes 2024",wiki:"Floyd_Mayweather_Jr.",
+bio:"Floyd Mayweather finished his career 50-0 and is the highest single-event earner in boxing. His 2015 Pacquiao fight earned him $300M+. He runs Mayweather Promotions and continues to earn from exhibition bouts. Known for lavish spending.",
+ws:[{l:"Fight purses & promotions",p:65},{l:"Mayweather Promotions",p:20},{l:"Endorsements & brand",p:10},{l:"Investments",p:5}],
+facts:[{k:"Born",v:"1977, Michigan, USA"},{k:"Record",v:"50-0"},{k:"Pacquiao fight",v:"$300M+ earned"},{k:"Nickname",v:"Money / TBE"}],
+q:"Hard work, dedication."},
+
+{n:"Conor McGregor",cat:"athlete",tag:"UFC · Proper No. Twelve · Boxing",w:200,u:"M",rank:"UFC Richest",src:"Forbes 2024",wiki:"Conor_McGregor",
+bio:"Conor McGregor was the highest-paid athlete in 2021. His Proper No. Twelve Irish Whiskey was sold to Proximo Spirits for ~$600M, earning him approximately $150M. His 2017 boxing match with Floyd Mayweather earned ~$100M.",
+ws:[{l:"Proper No. Twelve sale",p:55},{l:"UFC purses",p:25},{l:"Endorsements",p:12},{l:"Real estate Dublin",p:8}],
+facts:[{k:"Born",v:"1988, Dublin, Ireland"},{k:"UFC titles",v:"Featherweight & Lightweight"},{k:"Mayweather fight",v:"~$100M earned"},{k:"Whiskey sold",v:"~$600M to Proximo"}],
+q:"If you have a clear picture, nothing can stop you."},
+
+{n:"Shaquille O'Neal",cat:"athlete",tag:"NBA · Business mogul · Media personality",w:400,u:"M",rank:"NBA Legends",src:"Forbes 2024",wiki:"Shaquille_O'Neal",
+bio:"Shaquille O'Neal invested his NBA earnings into a diverse portfolio including 155 Five Guys restaurants, 40 Papa John's franchises, Carnival and Google stocks, and real estate. He is one of the best examples of an athlete successfully transitioning to business.",
+ws:[{l:"Restaurant franchises (Five Guys, Papa John's)",p:40},{l:"Stocks & investments",p:30},{l:"Media & brand deals",p:20},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1972, New Jersey, USA"},{k:"NBA championships",v:"4"},{k:"Five Guys franchises",v:"155 locations"},{k:"NBA earnings",v:"$292M career"}],
+q:"Excellence is not a singular act, but a habit."},
+
+{n:"Magic Johnson",cat:"athlete",tag:"NBA · UrbanCoffee · Starbucks franchises",w:600,u:"M",rank:"NBA Business Legends",src:"Forbes 2024",wiki:"Magic_Johnson",
+bio:"Magic Johnson is one of the most successful athlete-investors in history. He partnered with Starbucks to open urban locations, owned stakes in the LA Lakers, Washington Commanders, LA Dodgers, and various real estate. He retired with HIV in 1991 and became a symbol of strength.",
+ws:[{l:"Sports ownership stakes",p:40},{l:"Starbucks partnership & urban real estate",p:30},{l:"MJE Investments",p:20},{l:"Media & brand",p:10}],
+facts:[{k:"Born",v:"1959, Michigan, USA"},{k:"NBA championships",v:"5 with LA Lakers"},{k:"HIV announcement",v:"1991, retired instantly"},{k:"Starbucks stores",v:"125+ partnership locations"}],
+q:"I tell kids: Develop a skill and never stop learning."},
+
+{n:"Manny Pacquiao",cat:"athlete",tag:"Boxing legend · Senator of the Philippines",w:220,u:"M",rank:"Boxing Icons",src:"Forbes 2023",wiki:"Manny_Pacquiao",
+bio:"Manny Pacquiao is the only eight-division world boxing champion in history. He was a senator and presidential candidate in the Philippines. His wealth comes from boxing purses, his McDonald's franchise in the Philippines, and acting/entertainment.",
+ws:[{l:"Boxing career earnings",p:55},{l:"McDonald's Philippines franchise",p:20},{l:"Political salary & investments",p:15},{l:"Endorsements",p:10}],
+facts:[{k:"Born",v:"1978, Philippines"},{k:"8-division champion",v:"Only in history"},{k:"Philippine Senator",v:"2016–2022"},{k:"Record",v:"62-8-2"}],
+q:"I am a living proof that God can use anybody."},
+
+{n:"Michael Phelps",cat:"athlete",tag:"Swimming · 23 Olympic gold medals",w:100,u:"M",rank:"Olympics Legend",src:"Celebrity Net Worth 2024",wiki:"Michael_Phelps",
+bio:"Michael Phelps is the most decorated Olympian of all time with 28 medals (23 gold). He earned from endorsements with Speedo, Under Armour, and Visa. He co-founded Aqua Vault and has been an active mental health advocate.",
+ws:[{l:"Endorsements (Speedo, Under Armour)",p:60},{l:"Aqua Vault & investments",p:20},{l:"Speaking fees",p:12},{l:"Real estate",p:8}],
+facts:[{k:"Born",v:"1985, Maryland, USA"},{k:"Olympic gold medals",v:"23 (most ever)"},{k:"Total Olympic medals",v:"28"},{k:"Mental health advocacy",v:"Active since 2014"}],
+q:"I think goals should never be easy — they should force you to work."},
+
+{n:"Usain Bolt",cat:"athlete",tag:"Sprint · 8 Olympic golds · Puma",w:90,u:"M",rank:"Olympic Icons",src:"Celebrity Net Worth 2024",wiki:"Usain_Bolt",
+bio:"Usain Bolt is the fastest human in recorded history (100m: 9.58s, 200m: 19.19s). He won 8 Olympic golds in sprinting. His Puma deal earned him over $10M annually. He co-founded Bolt Mobility (electric scooters) and launched a tech business in Jamaica.",
+ws:[{l:"Puma lifetime deal",p:45},{l:"Career appearances & prize money",p:30},{l:"Bolt Mobility & investments",p:15},{l:"Real estate Jamaica",p:10}],
+facts:[{k:"Born",v:"1986, Jamaica"},{k:"100m world record",v:"9.58 seconds"},{k:"Olympic gold medals",v:"8"},{k:"Puma deal",v:"$10M+ per year"}],
+q:"I trained four years to run nine seconds."},
+
+{n:"Phil Mickelson",cat:"athlete",tag:"Golf · PGA · LIV Golf",w:200,u:"M",rank:"Golf Icons",src:"Forbes 2023",wiki:"Phil_Mickelson",
+bio:"Phil Mickelson won 45 PGA Tour events including 6 major championships. He was one of the first high-profile golfers to join LIV Golf in 2022. He earns from KPMG and Callaway endorsements but his reputation suffered from controversial comments about the Saudi Golf League.",
+ws:[{l:"Career prize money",p:40},{l:"LIV Golf contract",p:30},{l:"Endorsements (KPMG, Callaway)",p:20},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1970, California, USA"},{k:"PGA wins",v:"45"},{k:"Major wins",v:"6"},{k:"LIV Golf joined",v:"2022"}],
+q:"One of the things I've learned is that a putter is a very personal thing."},
+
+{n:"Canelo Álvarez",cat:"athlete",tag:"Boxing · Super-Middleweight champion",w:280,u:"M",rank:"Boxing #1 Active",src:"Forbes 2023",wiki:"Saúl_Álvarez",
+bio:"Canelo Álvarez is the current undisputed super-middleweight world champion and the highest-paid active boxer in the world. His $365M deal with DAZN (2018) was the largest in sports media history at the time. He earns from endorsements with Hennessy and Under Armour.",
+ws:[{l:"Boxing purses & DAZN deal",p:65},{l:"Hennessy & endorsements",p:20},{l:"Investments Mexico",p:10},{l:"Real estate",p:5}],
+facts:[{k:"Born",v:"1990, Guadalajara, Mexico"},{k:"DAZN deal",v:"$365M (2018 record)"},{k:"World titles held",v:"4 (undisputed SMW)"},{k:"Record",v:"61-2-2"}],
+q:"I've worked too hard to let anyone take this from me."},
+
+// ── ACTORS ────────────────────────────────────────────────────
+{n:"Tom Cruise",cat:"actor",tag:"Mission Impossible · Top Gun · Producer",w:620,u:"M",rank:"#1 Actor",src:"Forbes 2023",wiki:"Tom_Cruise",
+bio:"Tom Cruise generates $12B+ total box office. He earns significant backend profit participation on MI and Top Gun films. Top Gun: Maverick (2022) earned him ~$100M from his profit share on the film's $1.49B gross.",
+ws:[{l:"Film backend profits",p:55},{l:"C2 Pictures production",p:20},{l:"Real estate",p:15},{l:"Endorsements",p:10}],
+facts:[{k:"Born",v:"1962, New York, USA"},{k:"Total box office",v:"$12B+"},{k:"Top Gun: Maverick",v:"$1.49B gross"},{k:"Golden Globes",v:"3"}],
+q:"I didn't become an actor for the fame. I love acting."},
+
+{n:"Jerry Seinfeld",cat:"actor",tag:"Seinfeld · Stand-up · Comedians in Cars",w:1.1,u:"B",rank:"Comedy Billionaire",src:"Forbes 2024",wiki:"Jerry_Seinfeld",
+bio:"Jerry Seinfeld became a billionaire through Seinfeld syndication royalties, which have paid out billions to its creators. He also owns 150+ Porsche cars (one of the world's largest collections) and earns $30M+ annually from stand-up comedy tours.",
+ws:[{l:"Seinfeld syndication royalties",p:60},{l:"Stand-up comedy",p:20},{l:"Porsche car collection",p:10},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1954, New York, USA"},{k:"Seinfeld seasons",v:"9 (1989–1998)"},{k:"Porsche collection",v:"150+ cars"},{k:"Annual earnings",v:"$30M+ from stand-up"}],
+q:"A bookstore is one of the only pieces of evidence we have that people are still thinking."},
+
+{n:"Adam Sandler",cat:"actor",tag:"Happy Madison Productions · Netflix deal",w:440,u:"M",rank:"Comedy Icons",src:"Forbes 2024",wiki:"Adam_Sandler",
+bio:"Adam Sandler's Netflix deal (reportedly $275M for 4 films) is one of the most lucrative in streaming history. His Happy Madison Productions has produced 40+ films. Despite critical mockery, Sandler's films consistently earn hundreds of millions globally.",
+ws:[{l:"Netflix deal",p:40},{l:"Happy Madison Productions",p:30},{l:"Film royalties",p:20},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1966, New York, USA"},{k:"Netflix deal",v:"$275M for 4 films"},{k:"Uncut Gems (2019)",v:"Critically acclaimed"},{k:"Annual earnings",v:"$40M+ consistently"}],
+q:"When I'm not funny, I'm not trying to be."},
+
+{n:"Leonardo DiCaprio",cat:"actor",tag:"Appian Way Productions · Environmentalist",w:300,u:"M",rank:"Hollywood Elite",src:"Forbes 2024",wiki:"Leonardo_DiCaprio",
+bio:"Leonardo DiCaprio finally won his Oscar for The Revenant (2016). Beyond acting, he runs Appian Way Productions and is a major environmental philanthropist, having donated $100M+ to conservation. He invests in sustainable startups.",
+ws:[{l:"Film salary & backend",p:55},{l:"Appian Way Productions",p:20},{l:"Sustainable investments",p:15},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1974, Los Angeles, USA"},{k:"Oscar win",v:"The Revenant (2016)"},{k:"DiCaprio Foundation",v:"$100M+ donated"},{k:"Total box office",v:"$7B+"}],
+q:"I'm not the kind of person who gives up."},
+
+{n:"Brad Pitt",cat:"actor",tag:"Actor · Plan B Entertainment · Miraval Rosé",w:400,u:"M",rank:"Hollywood Elite",src:"Forbes 2023",wiki:"Brad_Pitt",
+bio:"Brad Pitt co-founded Plan B Entertainment, which produced Oscar-winning films including 12 Years a Slave, Moonlight, and Selma. He sold his stake in Miraval Château (France) winery — a protracted legal battle with Angelina Jolie followed. He earns $20M+ per major film.",
+ws:[{l:"Film salary & backend",p:55},{l:"Plan B Entertainment",p:25},{l:"Miraval (partial)",p:10},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1963, Oklahoma, USA"},{k:"Oscar wins",v:"2 (acting + producing)"},{k:"Plan B films",v:"12 Years a Slave, Moonlight"},{k:"Miraval rosé",v:"One of world's top rosés"}],
+q:"I'm one of those people you hate because of genetics."},
+
+{n:"Robert Downey Jr.",cat:"actor",tag:"Iron Man · Avengers · Producer",w:300,u:"M",rank:"Marvel Megastar",src:"Forbes 2023",wiki:"Robert_Downey_Jr.",
+bio:"Robert Downey Jr.'s career was transformed by Iron Man (2008). He reportedly earned $75M+ from Avengers: Endgame alone through backend profit participation. He is returning to the MCU as Doctor Doom in Avengers: Doomsday.",
+ws:[{l:"Film backend profits (Marvel)",p:55},{l:"Team Downey production",p:20},{l:"Real estate",p:15},{l:"Endorsements",p:10}],
+facts:[{k:"Born",v:"1965, New York, USA"},{k:"Iron Man debut",v:"2008"},{k:"Endgame earnings",v:"$75M+"},{k:"Oscar nomination",v:"Oppenheimer (2023)"}],
+q:"Discipline for me is about respect. It's respect for the craft."},
+
+{n:"Will Smith",cat:"actor",tag:"Actor · Overbrook Entertainment · Slap incident",w:350,u:"M",rank:"Hollywood A-List",src:"Forbes 2023",wiki:"Will_Smith",
+bio:"Will Smith starred in blockbusters including Ali, Hitch, I Am Legend, and the Bad Boys franchise. He won his first Oscar for King Richard (2022), the same night as the Chris Rock slapping incident. His Overbrook Entertainment produces films and TV shows.",
+ws:[{l:"Film salary & backend",p:60},{l:"Overbrook Entertainment",p:20},{l:"Real estate",p:12},{l:"Endorsements",p:8}],
+facts:[{k:"Born",v:"1968, Philadelphia, USA"},{k:"Oscar win",v:"King Richard (2022)"},{k:"#1 films",v:"Bad Boys, Ali, Hitch"},{k:"Grammy Awards",v:"4"}],
+q:"The separation of talent and skill is one of the greatest misunderstood concepts."},
+
+{n:"Denzel Washington",cat:"actor",tag:"Actor · Director · Unstoppable",w:280,u:"M",rank:"Hollywood Icons",src:"Celebrity Net Worth 2024",wiki:"Denzel_Washington",
+bio:"Denzel Washington has won 2 Academy Awards (Philadelphia, Training Day) and a Tony Award. He commands $20M+ per major film and is considered one of the greatest actors of his generation. He keeps a deliberately low profile.",
+ws:[{l:"Film salary & royalties",p:70},{l:"Production company",p:15},{l:"Real estate",p:15}],
+facts:[{k:"Born",v:"1954, New York, USA"},{k:"Oscar wins",v:"2"},{k:"Tony Award",v:"Fences (2010)"},{k:"Fee",v:"$20M+ per film"}],
+q:"Without commitment, you'll never start. Without consistency, you'll never finish."},
+
+{n:"Jackie Chan",cat:"actor",tag:"Action star · Martial arts · Director",w:520,u:"M",rank:"Asian Cinema Legend",src:"Forbes 2023",wiki:"Jackie_Chan",
+bio:"Jackie Chan has made 150+ films and is the highest-paid actor in Chinese cinema. Beyond Hong Kong films, he became a global star through Rush Hour and Shanghai series. He runs JCE Movies Limited production company and has invested heavily in restaurants and real estate.",
+ws:[{l:"Film salary & royalties",p:55},{l:"JCE Movies production",p:20},{l:"Real estate & restaurants",p:15},{l:"Endorsements (China)",p:10}],
+facts:[{k:"Born",v:"1954, Hong Kong"},{k:"Films made",v:"150+"},{k:"Honorary Oscar",v:"2016"},{k:"Stunts",v:"Performs own stunts"}],
+q:"I never wanted to be the next Bruce Lee. I just wanted to be the first Jackie Chan."},
+
+{n:"Arnold Schwarzenegger",cat:"actor",tag:"Terminator · Governor of California",w:450,u:"M",rank:"Action Legends",src:"Celebrity Net Worth 2024",wiki:"Arnold_Schwarzenegger",
+bio:"Arnold Schwarzenegger won Mr. Universe at 20 and Mr. Olympia 7 times. He became Hollywood's #1 action star (Terminator, Predator, Total Recall) and served as Governor of California 2003–2011. He earns from real estate, an Austrian hotel, and speaking fees.",
+ws:[{l:"Real estate",p:40},{l:"Film royalties & salary",p:35},{l:"Austrian hotel & investments",p:15},{l:"Speaking & brand",p:10}],
+facts:[{k:"Born",v:"1947, Thal, Austria"},{k:"Mr. Olympia wins",v:"7"},{k:"CA Governor",v:"2003–2011"},{k:"Immigrated to USA",v:"1968, age 21"}],
+q:"Strength does not come from winning. Your struggles develop your strengths."},
+
+{n:"Sylvester Stallone",cat:"actor",tag:"Rocky · Rambo · Writer/Director",w:400,u:"M",rank:"Action Legends",src:"Celebrity Net Worth 2024",wiki:"Sylvester_Stallone",
+bio:"Sylvester Stallone wrote Rocky (1976) in 3.5 days and insisted on starring in it — the film won 3 Oscars including Best Picture. He earned millions from Rambo and later Expendables franchises. He is also a prolific painter whose art sells for $100K+.",
+ws:[{l:"Film royalties & salary",p:65},{l:"Expendables franchise",p:15},{l:"Painting sales",p:8},{l:"Real estate",p:12}],
+facts:[{k:"Born",v:"1946, New York, USA"},{k:"Rocky written",v:"3.5 days"},{k:"Rocky Oscar",v:"Best Picture 1977"},{k:"Painting sales",v:"$100K+ per piece"}],
+q:"Life's not about how hard of a hit you can give… it's about how many you can take, and still keep moving forward."},
+
+{n:"Scarlett Johansson",cat:"actor",tag:"Black Widow · MCU · The Outset",w:200,u:"M",rank:"Highest-Paid Actress",src:"Forbes 2023",wiki:"Scarlett_Johansson",
+bio:"Scarlett Johansson was Hollywood's highest-paid actress in 2018–2019. She successfully sued Disney for releasing Black Widow on streaming simultaneously with theaters, settling for ~$40M. She also founded The Outset skincare brand.",
+ws:[{l:"Film salary & Disney settlement",p:60},{l:"The Outset skincare",p:20},{l:"Endorsements",p:10},{l:"Real estate",p:10}],
+facts:[{k:"Born",v:"1984, New York, USA"},{k:"MCU appearances",v:"9 as Black Widow"},{k:"Disney settlement",v:"~$40M (2021)"},{k:"Skincare brand",v:"The Outset (2022)"}],
+q:"I've always taken risks, and never worried what the world might think."},
+
+{n:"Jennifer Aniston",cat:"actor",tag:"Friends · Reese Witherspoon · LolaVie",w:320,u:"M",rank:"TV & Film Icons",src:"Celebrity Net Worth 2024",wiki:"Jennifer_Aniston",
+bio:"Jennifer Aniston earned up to $1M per episode during Friends' final seasons. Friends has continued to earn her royalties as it remains the most-watched sitcom in streaming. She founded LolaVie hair care brand and has endorsements with Vital Proteins and Smartwater.",
+ws:[{l:"Friends royalties (ongoing)",p:35},{l:"Film salary",p:30},{l:"LolaVie & endorsements",p:20},{l:"Real estate",p:15}],
+facts:[{k:"Born",v:"1969, California, USA"},{k:"Friends salary",v:"$1M per episode (final)"},{k:"LolaVie launched",v:"2021"},{k:"Emmy Award",v:"1 (Friends)"}],
+q:"Good things don't happen by coincidence. Every dream carries a price."},
+
+{n:"Kevin Hart",cat:"actor",tag:"Stand-up comedian · HartBeat Productions",w:200,u:"M",rank:"Comedy Stars",src:"Forbes 2024",wiki:"Kevin_Hart",
+bio:"Kevin Hart is one of the highest-paid comedians in the world. His stand-up tours earn $70M+ and his HartBeat Productions creates films and content. He founded Hartbeat Ventures, investing in food and tech startups including Beyond Meat competitor Mush.",
+ws:[{l:"Stand-up touring",p:40},{l:"Film salary & HartBeat",p:35},{l:"Hartbeat Ventures",p:15},{l:"Brand deals",p:10}],
+facts:[{k:"Born",v:"1979, Philadelphia, USA"},{k:"Tour earnings",v:"$70M+ per tour"},{k:"HartBeat Productions",v:"40+ productions"},{k:"Netflix specials",v:"Multiple"}],
+q:"Everybody wants to be famous, but nobody wants to do the work."},
+
+{n:"Sandra Bullock",cat:"actor",tag:"Speed · Gravity · The Blind Side",w:250,u:"M",rank:"Hollywood Icons",src:"Celebrity Net Worth 2024",wiki:"Sandra_Bullock",
+bio:"Sandra Bullock has starred in multiple $100M+ films and was the world's highest-paid actress in 2010 and 2014. She won her Oscar for The Blind Side. She is also a restaurateur, owning Bess Bistro in Austin, Texas.",
+ws:[{l:"Film salary & backend",p:70},{l:"Real estate",p:15},{l:"Restaurant ventures",p:8},{l:"Other",p:7}],
+facts:[{k:"Born",v:"1964, Virginia, USA"},{k:"Oscar win",v:"The Blind Side (2010)"},{k:"Highest-paid actress",v:"2010 & 2014"},{k:"Austin restaurant",v:"Bess Bistro"}],
+q:"Nothing is ever perfect."},
+
+{n:"Johnny Depp",cat:"actor",tag:"Pirates of the Caribbean · Jack Sparrow",w:150,u:"M",rank:"Hollywood Stars",src:"Celebrity Net Worth 2024",wiki:"Johnny_Depp",
+bio:"Johnny Depp earned up to $100M per Pirates of the Caribbean sequel but famously spent (and lost) vast sums. After the highly publicized Amber Heard defamation trial in 2022, where Depp won, he has been returning to acting. His net worth is lower than peak due to legal fees and spending.",
+ws:[{l:"Film royalties (Pirates etc.)",p:50},{l:"Painting & art sales",p:20},{l:"Real estate & other",p:30}],
+facts:[{k:"Born",v:"1963, Kentucky, USA"},{k:"Pirates gross",v:"$4.5B franchise"},{k:"Defamation verdict",v:"Won vs Amber Heard (2022)"},{k:"Art sales",v:"Painting under name 'Deveraux'"}],
+q:"I think the thing to do is to enjoy the ride while you're on it."},
+
+{n:"Meryl Streep",cat:"actor",tag:"3 Oscars · Most nominated actress",w:160,u:"M",rank:"Greatest Actress",src:"Celebrity Net Worth 2024",wiki:"Meryl_Streep",
+bio:"Meryl Streep has received 21 Academy Award nominations (more than any other actress) and won 3 Oscars. She commands $15M+ per film and is considered by many critics as the greatest living actress. She earns from real estate in New York and Connecticut.",
+ws:[{l:"Film salary & royalties",p:65},{l:"Stage & TV work",p:15},{l:"Real estate",p:20}],
+facts:[{k:"Born",v:"1949, New Jersey, USA"},{k:"Oscar wins",v:"3 (most by any actress)"},{k:"Oscar nominations",v:"21 (record)"},{k:"Industry",v:"Film · Stage · Activism"}],
+q:"The formula of happiness and success is just being actually yourself."},
+];
+
+// ════════════════════════════════════════════════════════════════
+// STATE & UTILS
+// ════════════════════════════════════════════════════════════════
+let cat="all",q="",list=[];
+const fw=(w,u)=>`<span class="cur">$</span>${w}${u}`;
+const toUSD=(w,u)=>u==="B"?w*1e9:w*1e6;
+const fmtBig=n=>n>=1e12?`$${(n/1e12).toFixed(1)}T`:n>=1e9?`$${(n/1e9).toFixed(1)}B`:`$${(n/1e6).toFixed(0)}M`;
+const ini=n=>n.split(" ").slice(0,2).map(s=>s[0]).join("").toUpperCase();
+
+// Wikipedia photo cache
+const pcache={};
+async function photo(wiki){
+  if(!wiki)return null;
+  if(pcache[wiki]!==undefined)return pcache[wiki];
+  try{
+    const r=await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wiki)}`);
+    const d=await r.json();
+    pcache[wiki]=d.thumbnail?.source||null;
+  }catch{pcache[wiki]=null;}
+  return pcache[wiki];
+}
+
+function setImg(el,url,name){
+  const img=document.createElement("img");
+  img.alt=name;
+  img.src=url;
+  img.onerror=()=>{img.remove();el.textContent=ini(name);};
+  el.textContent="";
+  el.appendChild(img);
+}
+
+// ════════════════════════════════════════════════════════════════
+// RENDER GRID
+// ════════════════════════════════════════════════════════════════
+function render(){
+  const grid=document.getElementById("grid");
+  list=cat==="all"?P:P.filter(p=>p.cat===cat);
+  if(q)list=list.filter(p=>p.n.toLowerCase().includes(q.toLowerCase())||p.tag.toLowerCase().includes(q.toLowerCase()));
+
+  if(!list.length){grid.innerHTML=`<div class="empty">No results for "${q}"</div>`;updateStats([]);return;}
+
+  grid.innerHTML=list.map((p,i)=>`
+    <div class="card" data-i="${i}" style="animation-delay:${Math.min(i*25,600)}ms">
+      <div class="ctop">
+        <div class="av" id="av${i}">${ini(p.n)}</div>
+        <div class="cinfo"><div class="cname">${p.n}</div><div class="ctag">${p.tag}</div></div>
+      </div>
+      <div class="cworth">${fw(p.w,p.u)}</div>
+      <div class="cfoot"><span class="csrc">${p.src}</span><span class="rbadge">${p.rank}</span></div>
+    </div>`).join("");
+
+  updateStats(list);
+
+  list.forEach((p,i)=>{
+    if(!p.wiki)return;
+    photo(p.wiki).then(url=>{
+      if(!url)return;
+      const el=document.getElementById(`av${i}`);
+      if(el)setImg(el,url,p.n);
+    });
+  });
+
+  grid.querySelectorAll(".card").forEach(c=>c.addEventListener("click",()=>openModal(list[+c.dataset.i])));
+}
+
+function updateStats(arr){
+  const tot=arr.reduce((s,p)=>s+toUSD(p.w,p.u),0);
+  const top=arr.length?[...arr].sort((a,b)=>toUSD(b.w,b.u)-toUSD(a.w,a.u))[0]:null;
+  document.getElementById("stot").textContent=arr.length?fmtBig(tot):"—";
+  document.getElementById("scnt").textContent=arr.length||"—";
+  document.getElementById("stop").textContent=top?`${top.n.split(" ")[0]}`:"-";
+  document.getElementById("savg").textContent=arr.length?fmtBig(tot/arr.length):"—";
+  document.getElementById("cl").textContent=`${arr.length} people`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// MODAL
+// ════════════════════════════════════════════════════════════════
+async function openModal(p){
+  const ov=document.getElementById("ov");
+  const mhdr=document.getElementById("mhdr");
+  const mbody=document.getElementById("mbody");
+
+  // Build avatar
+  const url=p.wiki?(pcache[p.wiki]!==undefined?pcache[p.wiki]:await photo(p.wiki)):null;
+
+  mhdr.innerHTML=`
+    <div class="mav" id="mav">${ini(p.n)}</div>
+    <div class="mtblock">
+      <div class="mname">${p.n}</div>
+      <div class="mtag">${p.tag}</div>
+      <div class="mwrow"><div class="mworth">${fw(p.w,p.u)}</div><span class="msrc">${p.src}</span></div>
+    </div>
+    <button class="mclose" id="mcls">✕</button>`;
+
+  document.getElementById("mcls").onclick=closeModal;
+
+  if(url){
+    const mav=document.getElementById("mav");
+    if(mav)setImg(mav,url,p.n);
+  }
+
+  // Build body
+  const maxPct=p.ws&&p.ws.length?Math.max(...p.ws.map(s=>s.p)):1;
+
+  mbody.innerHTML=`
+    ${p.bio?`<div><div class="slabel">Biography</div><div class="biotext">${p.bio}</div></div>`:""}
+    ${p.ws&&p.ws.length?`<div><div class="slabel">Wealth Breakdown</div><div class="bars">
+      ${p.ws.map(s=>`<div class="brow">
+        <div class="blabel"><span>${s.l}</span><span>${s.p}%</span></div>
+        <div class="btrack"><div class="bfill" style="width:0%" data-p="${(s.p/maxPct)*100}"></div></div>
+      </div>`).join("")}
+    </div></div>`:""}
+    ${p.facts&&p.facts.length?`<div><div class="slabel">Quick Facts</div><div class="fgrid">
+      ${p.facts.map(f=>`<div class="fbox"><div class="fval">${f.v}</div><div class="fkey">${f.k}</div></div>`).join("")}
+    </div></div>`:""}
+    ${p.q?`<div><div class="slabel">Famous Quote</div><div class="qblock">"${p.q}"</div></div>`:""}`;
+
+  ov.classList.add("open");
+  document.body.style.overflow="hidden";
+
+  // Animate bars
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      mbody.querySelectorAll(".bfill").forEach(el=>{el.style.width=el.dataset.p+"%";});
+    });
+  });
+}
+
+function closeModal(){
+  document.getElementById("ov").classList.remove("open");
+  document.body.style.overflow="";
+}
+document.getElementById("ov").addEventListener("click",e=>{if(e.target.id==="ov")closeModal();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+
+// ════════════════════════════════════════════════════════════════
+// EVENTS
+// ════════════════════════════════════════════════════════════════
+document.getElementById("tabs").addEventListener("click",e=>{
+  const t=e.target.closest(".tab");if(!t)return;
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");
+  cat=t.dataset.cat;q="";
+  document.getElementById("si").value="";
+  render();
+});
+document.getElementById("si").addEventListener("input",e=>{q=e.target.value.trim();render();});
+setInterval(()=>{document.getElementById("ts").textContent=new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",second:"2-digit"});},1000);
+document.getElementById("ts").textContent=new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+render();
+</script>
+</body>
+</html>
